@@ -296,5 +296,44 @@
     // initial render
     renderPayments();
   </script>
+  <!-- Email Buttons -->
+  <div class="email-actions">
+    <button id="emailPdfBtn">Email PDF Report</button>
+    <button id="emailExcelBtn">Email Excel Report</button>
+  </div>
+
+  <script>
+    // --- EMAIL REPORT BUTTONS (placeholders for backend integration) ---
+
+    document.getElementById('emailPdfBtn').addEventListener('click', () => {
+      alert('PDF email functionality will connect to your backend API.');
+      // Example: sendReport('pdf');
+    });
+
+    document.getElementById('emailExcelBtn').addEventListener('click', () => {
+      alert('Excel email functionality will connect to your backend API.');
+      // Example: sendReport('excel');
+    });
+
+    // --- Example structure for backend call ---
+    function sendReport(type) {
+      fetch('/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: type, data: collectReportData() })
+      })
+      .then(r => r.json())
+      .then(res => alert(res.message));
+    }
+
+    // --- Example harvest function (can be expanded) ---
+    function collectReportData() {
+      return {
+        taxableIncome: document.getElementById('taxableIncome')?.value || '',
+        payments: getPaymentRows?.() || [],
+        results: document.getElementById('resultSection')?.innerText || ''
+      };
+    }
+  </script>
 </body>
 </html>
