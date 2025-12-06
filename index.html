@@ -80,7 +80,10 @@
       <div class="card">
         <h3>Advance tax / Other payments (add multiple rows)</h3>
         <div class="muted small">Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
-        <table id="paymentsTable">
+        <button id="addPayment" style="background:#2563eb;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Add Payment</button>
+<button id="clearPayments" style="background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Clear All</button>
+
+<table id="paymentsTable">
           <thead><tr><th>Date</th><th>Amount (₹)</th><th></th></tr></thead>
           <tbody id="paymentsBody"></tbody>
         </table>
