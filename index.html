@@ -3,243 +3,298 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>IT Interest Calculator (Sections 234A / 234B / 234C)</title>
+  <title>IT Interest Calculator — Exact Excel Logic (Multi-payment)</title>
   <style>
-    :root{--bg:#0f1724;--panel:#071827;--muted:#9aa6b2;--accent:#06b6d4}
-    body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#041422,#071226);color:#e6eef6;margin:0;padding:20px}
-    .container{max-width:980px;margin:16px auto;background:var(--panel);padding:18px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
-    h1{margin:0 0 12px;font-size:20px}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .card{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;flex:1;min-width:280px}
-    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-    input[type="number"], input[type="date"], select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    button{background:var(--accent);border:0;padding:10px 12px;border-radius:8px;color:#032028;cursor:pointer;font-weight:600}
-    .result{margin-top:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.25)}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    td,th{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:13px}
-    .muted{color:var(--muted);font-size:13px}
+    body{font-family:Inter, system-ui, Arial; background:#f4f6f8;color:#102027;margin:0;padding:20px}
+    .wrap{max-width:1100px;margin:20px auto}
+    .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 6px 20px rgba(16,32,40,0.06);margin-bottom:16px}
+    h1{margin:0 0 8px;font-size:20px}
+    label{display:block;font-size:13px;color:#556; margin-bottom:6px}
+    input[type="number"], input[type="date"], select{width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef2}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eef3f5;text-align:left;font-size:13px}
+    button{background:#0ea5a4;border:0;color:white;padding:8px 10px;border-radius:6px;cursor:pointer}
+    .muted{color:#6b7880;font-size:13px}
+    .out{background:#f8fafb;border-radius:8px;padding:12px;margin-top:12px}
     .small{font-size:13px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .danger{background:#ef4444}
+    .secondary{background:#64748b}
   </style>
 </head>
 <body>
-  <div class="container" role="main">
-    <h1>Income-tax Interest Calculator — Sections 234A, 234B & 234C</h1>
-    <div class="muted small">This tool follows the standard approach: simple interest @ <strong>1% per month or part thereof</strong> on the unpaid amounts. (Source: Income Tax Department FAQs / Interest tool.)</div>
+  <div class="wrap">
+    <div class="card">
+      <h1>Income-tax Interest Calculator — Exact Excel Logic (Multi-payment)</h1>
+      <div class="muted small">This implements the Excel logic: month-or-part rule (ceil days/30), ROUND to nearest ₹100 for 234B base, cumulative payments by date, quarterly 234C rules (3 months for Q1-Q3, 1 month for Q4) and 234F late fee.</div>
+    </div>
 
-    <div class="row" style="margin-top:12px">
-      <section class="card" aria-labelledby="basic">
-        <h2 id="basic" style="font-size:15px;margin:0 0 8px">Common inputs</h2>
-        <label>Total tax payable (₹)
+    <form id="frm">
+      <div class="card grid">
+        <div>
+          <label>Total tax payable (₹)</label>
           <input id="taxPayable" type="number" step="0.01" value="0">
-        </label>
-        <label>TDS / TCS / Other credits (₹)
+        </div>
+        <div>
+          <label>TDS / TCS / Other credits (₹)</label>
           <input id="tds" type="number" step="0.01" value="0">
-        </label>
-        <label>Relief / MAT / AMT credit (₹)
+        </div>
+        <div>
+          <label>Reliefs / MAT / AMT credit (₹)</label>
           <input id="relief" type="number" step="0.01" value="0">
-        </label>
-        <label>Self-assessment tax paid on or before due date (₹)
+        </div>
+      </div>
+
+      <div class="card grid">
+        <div>
+          <label>Self-assessment tax paid on or before due date (₹)</label>
           <input id="selfTax" type="number" step="0.01" value="0">
-        </label>
-      </section>
-
-      <section class="card" aria-labelledby="dates">
-        <h2 id="dates" style="font-size:15px;margin:0 0 8px">Dates</h2>
-        <label>Due date of return (under section 139(1))
-          <input id="dueReturn" type="date">
-        </label>
-        <label>Actual date of filing return
-          <input id="fileReturn" type="date">
-        </label>
-        <label>Date to compute 234B (determination / assessment date or date)
-          <input id="determineDate" type="date">
-        </label>
-      </section>
-    </div>
-
-    <div class="row" style="margin-top:12px">
-      <section class="card">
-        <h2 style="font-size:15px;margin:0 0 8px">Section 234A — interest for delay in filing return</h2>
-        <div class="muted small">Interest = 1% × (shortfall) × (months or part thereof between day after due date and filing date)</div>
-        <button id="calc234A">Calculate 234A</button>
-        <div id="out234A" class="result" aria-live="polite"></div>
-      </section>
-
-      <section class="card">
-        <h2 style="font-size:15px;margin:0 0 8px">Section 234B — interest for default in payment of advance tax</h2>
-        <div class="muted small">Interest = 1% × (assessed tax shortfall) × (months or part thereof from April 1 of AY to determination date)</div>
-        <label>Is assessee a resident senior citizen with no business income? (If yes — advance tax not applicable)
-          <select id="senior">
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
+        </div>
+        <div>
+          <label>Total income (for 234F slab) (₹)</label>
+          <input id="totalIncome" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Assessment Year (AY)</label>
+          <select id="ay">
+            <option value="2024-25">2024-25</option>
+            <option value="2025-26">2025-26</option>
+            <option value="2026-27">2026-27</option>
           </select>
-        </label>
-        <button id="calc234B">Calculate 234B</button>
-        <div id="out234B" class="result" aria-live="polite"></div>
-      </section>
-    </div>
+        </div>
+      </div>
 
-    <section class="card" style="margin-top:12px">
-      <h2 style="font-size:15px;margin:0 0 8px">Section 234C — interest for deferment of advance tax (quarterly instalments)</h2>
-      <div class="muted small">Standard due percentages: 15% by 15 Jun, 45% by 15 Sep, 75% by 15 Dec, 100% by 15 Mar (of total advance tax liability).</div>
+      <div class="card grid-2">
+        <div>
+          <label>Due date of return (under section 139(1))</label>
+          <input id="dueReturn" type="date">
+        </div>
+        <div>
+          <label>Actual date of filing return</label>
+          <input id="fileReturn" type="date">
+        </div>
+      </div>
 
-      <table aria-describedby="inst-desc"><thead><tr><th>Instalment</th><th>Due date</th><th>Required %</th><th>Amount paid till due date (₹)</th><th>Date of actual payment</th></tr></thead>
-      <tbody>
-        <tr><td>1</td><td>15 Jun</td><td>15%</td><td><input type="number" id="p1" step="0.01" value="0"></td><td><input type="date" id="d1"></td></tr>
-        <tr><td>2</td><td>15 Sep</td><td>45%</td><td><input type="number" id="p2" step="0.01" value="0"></td><td><input type="date" id="d2"></td></tr>
-        <tr><td>3</td><td>15 Dec</td><td>75%</td><td><input type="number" id="p3" step="0.01" value="0"></td><td><input type="date" id="d3"></td></tr>
-        <tr><td>4</td><td>15 Mar</td><td>100%</td><td><input type="number" id="p4" step="0.01" value="0"></td><td><input type="date" id="d4"></td></tr>
-      </tbody></table>
+      <div class="card">
+        <h3>Advance tax / Other payments (add multiple rows)</h3>
+        <div class="muted small">Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
+        <table id="paymentsTable">
+          <thead><tr><th>Date</th><th>Amount (₹)</th><th></th></tr></thead>
+          <tbody id="paymentsBody"></tbody>
+        </table>
+        <div style="margin-top:8px" class="actions">
+          <button type="button" id="addPayment">Add payment</button>
+          <button type="button" id="clearPayments" class="secondary">Clear payments</button>
+        </div>
+      </div>
 
-      <div style="margin-top:8px"><button id="calc234C">Calculate 234C</button></div>
-      <div id="out234C" class="result" aria-live="polite"></div>
-    </section>
+      <div class="card actions">
+        <button type="button" id="compute">Compute interest (234A/234B/234C/234F)</button>
+        <button type="button" id="download" class="secondary">Download report (CSV)</button>
+        <button type="button" id="reset" class="danger">Reset all</button>
+      </div>
+    </form>
 
-    <div style="margin-top:12px" class="muted small">References: Income Tax Department interest calculator & FAQs (interest charged @ 1% per month or part thereof). See official tool for authoritative results.</div>
+    <div id="output" class="card out" aria-live="polite"></div>
   </div>
 
   <script>
-    // helper functions
-    function toNumber(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+    // Utilities
+    const $ = (id)=>document.getElementById(id);
+    function toNum(v){ const n = Number(v); return isNaN(n)?0:n; }
+    function fmt(x){ return '₹ ' + Number(x).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    function daysBetween(a,b){ // b - a in ms -> days
-      const A = new Date(a); const B = new Date(b); if (!A.getTime()||!B.getTime()) return NaN;
-      const diff = B.getTime() - A.getTime(); return Math.ceil(diff / (1000*60*60*24));
-    }
+    // Round to nearest 100 as Excel ROUND(x,-2)
+    function roundNearest100(x){ return Math.round(x/100)*100; }
 
-    function monthsPartBetween(a,b){
-      // count months or part thereof between date a (exclusive) and b (inclusive)
-      // we'll compute days and divide by 30, rounding up as "part of month"
-      const days = daysBetween(a,b);
-      if (isNaN(days) || days <= 0) return 0;
-      return Math.ceil(days / 30);
-    }
+    function dateISO(d){ if(!d) return null; const dt = new Date(d); if (isNaN(dt)) return null; return dt.toISOString().slice(0,10); }
 
-    function formatINR(x){ return '₹ ' + Number(x).toLocaleString('en-IN', {maximumFractionDigits:2, minimumFractionDigits:2}); }
+    // days between a (inclusive?) and b. We'll compute b - a in days
+    function daysBetween(a,b){ const A=new Date(a); const B=new Date(b); if (isNaN(A)||isNaN(B)) return NaN; const diff=B.getTime()-A.getTime(); return Math.ceil(diff/(1000*60*60*24)); }
+    // months or part thereof between a (exclusive) and b (inclusive) as per Excel logic -> ceil(days/30)
+    function monthsPart(a,b){ const days = daysBetween(a,b); if (isNaN(days) || days<=0) return 0; return Math.ceil(days/30); }
 
-    // 234A
-    document.getElementById('calc234A').addEventListener('click', ()=>{
-      const taxPayable = toNumber(document.getElementById('taxPayable').value);
-      const tds = toNumber(document.getElementById('tds').value);
-      const relief = toNumber(document.getElementById('relief').value);
-      const selfTax = toNumber(document.getElementById('selfTax').value);
-      const due = document.getElementById('dueReturn').value;
-      const filed = document.getElementById('fileReturn').value;
-      if(!due || !filed){ document.getElementById('out234A').innerText = 'Please enter due date and filing date.'; return; }
+    // Payments logic
+    const payments = [];
+    const paymentsBody = $('paymentsBody');
 
-      // shortfall for 234A: tax payable less credits (TDS/TCS + advance/self + relief)
-      const paidCredits = tds + selfTax + relief;
-      let shortfall = taxPayable - paidCredits; if (shortfall < 0) shortfall = 0;
+    function renderPayments(){ paymentsBody.innerHTML=''; payments.forEach((p,idx)=>{
+      const tr=document.createElement('tr');
+      const tdDate=document.createElement('td'); tdDate.textContent = p.date || '';
+      const tdAmt=document.createElement('td'); tdAmt.textContent = p.amount ? Number(p.amount).toFixed(2) : '';
+      const tdAct=document.createElement('td');
+      const btnDel=document.createElement('button'); btnDel.textContent='Remove'; btnDel.style.background='#ef4444'; btnDel.style.color='white'; btnDel.style.border='0'; btnDel.style.padding='6px 8px'; btnDel.style.borderRadius='6px'; btnDel.onclick=()=>{ payments.splice(idx,1); renderPayments(); };
+      tdAct.appendChild(btnDel);
+      tr.appendChild(tdDate); tr.appendChild(tdAmt); tr.appendChild(tdAct);
+      paymentsBody.appendChild(tr);
+    }); if(payments.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=3; td.className='muted'; td.textContent='No payments entered'; tr.appendChild(td); paymentsBody.appendChild(tr);} }
 
-      // interest months: from day after due date to filing date (months or part thereof)
-      const dueNext = new Date(due); dueNext.setDate(dueNext.getDate() + 1);
-      const months = monthsPartBetween(dueNext.toISOString().slice(0,10), filed);
-      const interest = shortfall * 0.01 * months;
-
-      document.getElementById('out234A').innerHTML = `<strong>Shortfall:</strong> ${formatINR(shortfall)}<br><strong>Months (or part):</strong> ${months}<br><strong>Interest @1%/month:</strong> ${formatINR(interest)}`;
+    $('addPayment').addEventListener('click', ()=>{
+      const date = prompt('Payment date (YYYY-MM-DD)'); if(!date) return; const iso = dateISO(date); if(!iso){ alert('Invalid date'); return; }
+      const amtStr = prompt('Amount (₹)'); if(!amtStr) return; const amt = toNum(amtStr); if(amt<=0){ alert('Enter positive amount'); return; }
+      payments.push({date:iso, amount:amt});
+      // sort by date
+      payments.sort((a,b)=> new Date(a.date)-new Date(b.date));
+      renderPayments();
     });
 
-    // 234B
-    document.getElementById('calc234B').addEventListener('click', ()=>{
-      const taxPayable = toNumber(document.getElementById('taxPayable').value);
-      const tds = toNumber(document.getElementById('tds').value);
-      const relief = toNumber(document.getElementById('relief').value);
-      const advanceTax = toNumber(document.getElementById('p1').value) + toNumber(document.getElementById('p2').value) + toNumber(document.getElementById('p3').value) + toNumber(document.getElementById('p4').value);
-      const senior = document.getElementById('senior').value === 'yes';
-      const detDate = document.getElementById('determineDate').value;
-      if (!detDate){ document.getElementById('out234B').innerText = 'Please enter determination/assessment date.'; return; }
+    $('clearPayments').addEventListener('click', ()=>{ if(confirm('Clear all payments?')){ payments.length=0; renderPayments(); } });
 
-      if (senior){ document.getElementById('out234B').innerHTML = 'Resident senior citizen with no business/profession income selected — advance tax not applicable (no 234B interest if advance tax rules not applicable).'; return; }
+    $('reset').addEventListener('click', ()=>{
+      if(!confirm('Reset all inputs?')) return;
+      document.getElementById('frm').reset(); payments.length=0; renderPayments(); $('output').innerHTML='';
+    });
 
-      // Assessed tax for purpose of 234B = tax payable - TDS/TCS - relief
+    // compute cumulative payments up to a date (inclusive)
+    function paidTill(date){ if(!date) return 0; const D=new Date(date); let sum=0; payments.forEach(p=>{ const pd=new Date(p.date); if (!isNaN(pd) && pd.getTime() <= D.getTime()) sum += Number(p.amount); }); return sum; }
+
+    // Main compute
+    $('compute').addEventListener('click', ()=>{
+      const taxPayable = toNum($('taxPayable').value);
+      const tds = toNum($('tds').value);
+      const relief = toNum($('relief').value);
+      const selfTax = toNum($('selfTax').value);
+      const totalIncome = toNum($('totalIncome').value);
+      const dueReturn = dateISO($('dueReturn').value);
+      const fileReturn = dateISO($('fileReturn').value);
+      const ay = $('ay').value;
+
+      if(!dueReturn || !fileReturn){ alert('Please enter due date and filing date'); return; }
+
+      // Assessed tax = tax payable - TDS - relief
       let assessedTax = taxPayable - tds - relief; if (assessedTax < 0) assessedTax = 0;
-      // shortfall = assessedTax - advanceTax
-      let shortfall = assessedTax - advanceTax; if (shortfall < 0) shortfall = 0;
 
-      // months from April 1 of AY to determination date
-      // determine AY: if determination date is in calendar year YYYY, AY = YYYY (if date >= Apr 1) ? YYYY+1? Simpler: use April 1 preceding the determination date's AY.
-      const det = new Date(detDate);
-      const year = det.getFullYear();
-      // March is month 2? We'll compute AY start as April 1 of (det.getMonth() >= 3 ? det.getFullYear() : det.getFullYear()-1) +  (we want April 1 of assessment year)
-      // For ease: find April 1 of the calendar year that starts the AY that contains det date
-      let ayStart;
-      if (det.getMonth() >= 3) { // Apr(3) .. Dec -> AY started Apr 1 of this year
-        ayStart = new Date(det.getFullYear(),3,1);
-      } else { // Jan-Feb-Mar => AY started Apr 1 of previous year
-        ayStart = new Date(det.getFullYear()-1,3,1);
-      }
+      // Total advance payments irrespective of date
+      const totalAdvance = payments.reduce((s,p)=>s+Number(p.amount),0);
 
-      const months = monthsPartBetween(ayStart.toISOString().slice(0,10), detDate);
-      const interest = shortfall * 0.01 * months;
+      // PAYMENTS considered up to dates:
+      const paidUpToFiling = paidTill(fileReturn);
 
-      document.getElementById('out234B').innerHTML = `<strong>Assessed tax (tax - TDS - relief):</strong> ${formatINR(assessedTax)}<br><strong>Advance tax paid:</strong> ${formatINR(advanceTax)}<br><strong>Shortfall:</strong> ${formatINR(shortfall)}<br><strong>Months (from Apr 1 to ${detDate}):</strong> ${months}<br><strong>Interest @1%/month:</strong> ${formatINR(interest)}`;
-    });
+      // 234A: shortfall = assessedTax - (selfTax + paidUpToFiling)
+      let short234A = assessedTax - (selfTax + paidUpToFiling); if (short234A < 0) short234A = 0;
+      // months from day after due date to filing date
+      const dueNext = new Date(dueReturn); dueNext.setDate(dueNext.getDate()+1);
+      const months234A = monthsPart(dueNext.toISOString().slice(0,10), fileReturn);
+      const int234A = short234A * 0.01 * months234A;
 
-    // 234C
-    document.getElementById('calc234C').addEventListener('click', ()=>{
-      const taxPayable = toNumber(document.getElementById('taxPayable').value);
-      // For advance tax instalments required amounts (based on taxPayable)
-      const req1 = taxPayable * 0.15;
-      const req2 = taxPayable * 0.45;
-      const req3 = taxPayable * 0.75;
-      const req4 = taxPayable * 1.00;
+      // 234B: base = round(max(assessedTax - totalAdvance,0), -2)
+      let base234B = Math.max(assessedTax - totalAdvance, 0);
+      const base234B_rounded = roundNearest100(base234B);
+      // months from Apr 1 of AY to filing date
+      // determine AY start year from AY select (e.g., '2025-26' -> start 2025-04-01)
+      let ayStartYear = parseInt(ay.split('-')[0],10);
+      const ayStart = new Date(ayStartYear,3,1); // April 1
+      const months234B = monthsPart(ayStart.toISOString().slice(0,10), fileReturn);
+      const int234B = base234B_rounded * 0.01 * months234B;
 
-      const paid1 = toNumber(document.getElementById('p1').value);
-      const paid2 = toNumber(document.getElementById('p2').value);
-      const paid3 = toNumber(document.getElementById('p3').value);
-      const paid4 = toNumber(document.getElementById('p4').value);
+      // 234C: instalment required percentages applied on assessedTax
+      const req1 = assessedTax * 0.15;
+      const req2 = assessedTax * 0.45;
+      const req3 = assessedTax * 0.75;
+      const req4 = assessedTax * 1.00;
 
-      const d1 = document.getElementById('d1').value; const d2 = document.getElementById('d2').value; const d3 = document.getElementById('d3').value; const d4 = document.getElementById('d4').value;
+      // For each due date compute cumulative paid till that due date
+      const yearForDue = new Date(fileReturn).getFullYear();
+      const due1 = yearForDue + '-06-15';
+      const due2 = yearForDue + '-09-15';
+      const due3 = yearForDue + '-12-15';
+      const due4 = (new Date(fileReturn).getMonth() < 3 ? (yearForDue - 1) : yearForDue) + '-03-15';
+      // Note: For March instalment, use AY mapping; but we'll assume due4 in the same AY as other due dates if unclear.
 
-      // For each instalment compute shortfall = required amount - amount paid till due date
-      // Note: "amount paid till due date" should be cumulative across earlier payments. Here inputs are expected to be cumulative paid amounts till that due date.
+      const paid1 = paidTill(due1);
+      const paid2 = paidTill(due2);
+      const paid3 = paidTill(due3);
+      const paid4 = paidTill(due4);
+
       const short1 = Math.max(0, req1 - paid1);
       const short2 = Math.max(0, req2 - paid2);
       const short3 = Math.max(0, req3 - paid3);
       const short4 = Math.max(0, req4 - paid4);
 
-      // months from due date+1 to actual payment date for each shortfall. If no payment date provided, use today.
-      const yearRef = (new Date()).getFullYear(); // we don't strictly know AY — user dates should be provided; but we will build due dates for the AY matching inputs' year if empty
+      // Per Excel logic: months multipliers: Q1-Q3 => 3 months each; Q4 => 1 month
+      const m1 = short1>0 ? 3 : 0;
+      const m2 = short2>0 ? 3 : 0;
+      const m3 = short3>0 ? 3 : 0;
+      const m4 = short4>0 ? 1 : 0;
 
-      function dueDateStr(monthDay, detYear){
-        // monthDay like '06-15' (MM-DD)
-        return detYear + '-' + monthDay;
+      const int1 = short1 * 0.01 * m1;
+      const int2 = short2 * 0.01 * m2;
+      const int3 = short3 * 0.01 * m3;
+      const int4 = short4 * 0.01 * m4;
+      const int234C = int1 + int2 + int3 + int4;
+
+      // 234F late fee: if filed after due date
+      let fee234F = 0;
+      if (new Date(fileReturn) > new Date(dueReturn)){
+        // Excel used slab on total income
+        fee234F = totalIncome > 250000 ? 5000 : 1000;
       }
 
-      // Determine year for due dates: if user provided any payment date, use its year; otherwise use current year
-      const anyDate = d1||d2||d3||d4;
-      const useYear = anyDate ? new Date(anyDate).getFullYear() : yearRef;
+      const totalInterest = int234A + int234B + int234C;
 
-      const due1 = useYear + '-06-15';
-      const due2 = useYear + '-09-15';
-      const due3 = useYear + '-12-15';
-      const due4 = useYear + '-03-15';
-
-      const months1 = short1>0 ? monthsPartBetween(due1, d1 || new Date().toISOString().slice(0,10)) : 0;
-      const months2 = short2>0 ? monthsPartBetween(due2, d2 || new Date().toISOString().slice(0,10)) : 0;
-      const months3 = short3>0 ? monthsPartBetween(due3, d3 || new Date().toISOString().slice(0,10)) : 0;
-      const months4 = short4>0 ? monthsPartBetween(due4, d4 || new Date().toISOString().slice(0,10)) : 0;
-
-      const int1 = short1 * 0.01 * months1;
-      const int2 = short2 * 0.01 * months2;
-      const int3 = short3 * 0.01 * months3;
-      const int4 = short4 * 0.01 * months4;
-
-      const total = int1 + int2 + int3 + int4;
-
+      // Build output
       const out = [];
-      out.push(`<strong>Total advance tax required (per percentages):</strong> ${formatINR(req4)}`);
-      out.push(`<table><tr><th>Inst</th><th>Required</th><th>Paid till due</th><th>Shortfall</th><th>Months</th><th>Interest</th></tr>`);
-      out.push(`<tr><td>1 (15 Jun)</td><td>${formatINR(req1)}</td><td>${formatINR(paid1)}</td><td>${formatINR(short1)}</td><td>${months1}</td><td>${formatINR(int1)}</td></tr>`);
-      out.push(`<tr><td>2 (15 Sep)</td><td>${formatINR(req2)}</td><td>${formatINR(paid2)}</td><td>${formatINR(short2)}</td><td>${months2}</td><td>${formatINR(int2)}</td></tr>`);
-      out.push(`<tr><td>3 (15 Dec)</td><td>${formatINR(req3)}</td><td>${formatINR(paid3)}</td><td>${formatINR(short3)}</td><td>${months3}</td><td>${formatINR(int3)}</td></tr>`);
-      out.push(`<tr><td>4 (15 Mar)</td><td>${formatINR(req4)}</td><td>${formatINR(paid4)}</td><td>${formatINR(short4)}</td><td>${months4}</td><td>${formatINR(int4)}</td></tr>`);
-      out.push(`</table><br><strong>Total interest under 234C:</strong> ${formatINR(total)}`);
+      out.push('<h2>Computation Summary</h2>');
+      out.push('<table>');
+      out.push(`<tr><th>Assessed tax (tax - tds - relief)</th><td>${fmt(assessedTax)}</td></tr>`);
+      out.push(`<tr><th>Total payments (all dates)</th><td>${fmt(totalAdvance)}</td></tr>`);
+      out.push(`<tr><th>Payments up to filing date (${fileReturn})</th><td>${fmt(paidUpToFiling)}</td></tr>`);
+      out.push('</table>');
 
-      document.getElementById('out234C').innerHTML = out.join('
-');
+      out.push('<h3>Section 234A — Delay in filing</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Shortfall for 234A</th><td>${fmt(short234A)}</td></tr>`);
+      out.push(`<tr><th>Months (or part) from day after due date to filing</th><td>${months234A}</td></tr>`);
+      out.push(`<tr><th>Interest @1%/month</th><td>${fmt(int234A)}</td></tr>`);
+      out.push('</table>');
+
+      out.push('<h3>Section 234B — Default in payment of advance tax</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Base (assessed tax - total advance)</th><td>${fmt(base234B)}</td></tr>`);
+      out.push(`<tr><th>Base rounded to nearest ₹100</th><td>${fmt(base234B_rounded)}</td></tr>`);
+      out.push(`<tr><th>Months from Apr 1 of AY (${ayStart.toISOString().slice(0,10)}) to filing</th><td>${months234B}</td></tr>`);
+      out.push(`<tr><th>Interest @1%/month</th><td>${fmt(int234B)}</td></tr>`);
+      out.push('</table>');
+
+      out.push('<h3>Section 234C — Deferment of advance tax (quarterly)</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Instalment</th><th>Required</th><th>Paid till due</th><th>Shortfall</th><th>Months</th><th>Interest</th></tr>`);
+      out.push(`<tr><td>1 (15 Jun)</td><td>${fmt(req1)}</td><td>${fmt(paid1)}</td><td>${fmt(short1)}</td><td>${m1}</td><td>${fmt(int1)}</td></tr>`);
+      out.push(`<tr><td>2 (15 Sep)</td><td>${fmt(req2)}</td><td>${fmt(paid2)}</td><td>${fmt(short2)}</td><td>${m2}</td><td>${fmt(int2)}</td></tr>`);
+      out.push(`<tr><td>3 (15 Dec)</td><td>${fmt(req3)}</td><td>${fmt(paid3)}</td><td>${fmt(short3)}</td><td>${m3}</td><td>${fmt(int3)}</td></tr>`);
+      out.push(`<tr><td>4 (15 Mar)</td><td>${fmt(req4)}</td><td>${fmt(paid4)}</td><td>${fmt(short4)}</td><td>${m4}</td><td>${fmt(int4)}</td></tr>`);
+      out.push(`<tr><th colspan="5">Total 234C interest</th><th>${fmt(int234C)}</th></tr>`);
+      out.push('</table>');
+
+      out.push('<h3>Section 234F — Late filing fee</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Filing after due date?</th><td>${new Date(fileReturn) > new Date(dueReturn) ? 'Yes' : 'No'}</td></tr>`);
+      out.push(`<tr><th>Late fee (234F)</th><td>${fmt(fee234F)}</td></tr>`);
+      out.push('</table>');
+
+      out.push('<h3>Grand totals</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Total interest (234A + 234B + 234C)</th><td>${fmt(totalInterest)}</td></tr>`);
+      out.push(`<tr><th>Late fee (234F)</th><td>${fmt(fee234F)}</td></tr>`);
+      out.push(`<tr><th>Payable (interest + fee)</th><td>${fmt(totalInterest + fee234F)}</td></tr>`);
+      out.push('</table>');
+
+      $('output').innerHTML = out.join('\n');
     });
 
+    // CSV download of payments and summary
+    $('download').addEventListener('click', ()=>{
+      if(payments.length===0){ alert('No payments to download'); return; }
+      let csv = 'date,amount\n'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}\n`);
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'payments.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // initial render
+    renderPayments();
   </script>
 </body>
 </html>
