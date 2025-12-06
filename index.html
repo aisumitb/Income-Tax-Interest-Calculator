@@ -111,11 +111,9 @@
 
     function dateISO(d){ if(!d) return null; const dt = new Date(d); if (isNaN(dt)) return null; return dt.toISOString().slice(0,10); }
 
-    function addDays(dateStr, days){ const d=new Date(dateStr); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
-
-    // days between a and b -> ceil difference in days
+    // days between a (inclusive?) and b. We'll compute b - a in days
     function daysBetween(a,b){ const A=new Date(a); const B=new Date(b); if (isNaN(A)||isNaN(B)) return NaN; const diff=B.getTime()-A.getTime(); return Math.ceil(diff/(1000*60*60*24)); }
-    // months or part thereof between a (exclusive) and b (inclusive) -> ceil(days/30)
+    // months or part thereof between a (exclusive) and b (inclusive) as per Excel logic -> ceil(days/30)
     function monthsPart(a,b){ const days = daysBetween(a,b); if (isNaN(days) || days<=0) return 0; return Math.ceil(days/30); }
 
     // Payments logic
@@ -152,9 +150,6 @@
     // compute cumulative payments up to a date (inclusive)
     function paidTill(date){ if(!date) return 0; const D=new Date(date); let sum=0; payments.forEach(p=>{ const pd=new Date(p.date); if (!isNaN(pd) && pd.getTime() <= D.getTime()) sum += Number(p.amount); }); return sum; }
 
-    // find date when cumulative payments (from start) reach at least targetAmount; if never reached return null
-    function dateWhenCovered(targetAmount){ let sum=0; for (const p of payments){ sum += Number(p.amount); if (sum >= targetAmount) return p.date; } return null; }
-
     // Main compute
     $('compute').addEventListener('click', ()=>{
       const taxPayable = toNum($('taxPayable').value);
@@ -174,23 +169,23 @@
       // Total advance payments irrespective of date
       const totalAdvance = payments.reduce((s,p)=>s+Number(p.amount),0);
 
-      // PAYMENTS considered up to filing date
+      // PAYMENTS considered up to dates:
       const paidUpToFiling = paidTill(fileReturn);
 
       // 234A: shortfall = assessedTax - (selfTax + paidUpToFiling)
       let short234A = assessedTax - (selfTax + paidUpToFiling); if (short234A < 0) short234A = 0;
       // months from day after due date to filing date
-      const dueNext = addDays(dueReturn,1);
-      const months234A = monthsPart(dueNext, fileReturn);
+      const dueNext = new Date(dueReturn); dueNext.setDate(dueNext.getDate()+1);
+      const months234A = monthsPart(dueNext.toISOString().slice(0,10), fileReturn);
       const int234A = short234A * 0.01 * months234A;
 
       // 234B: base = round(max(assessedTax - totalAdvance,0), -2)
       let base234B = Math.max(assessedTax - totalAdvance, 0);
       const base234B_rounded = roundNearest100(base234B);
       // months from Apr 1 of AY to filing date
-      // AY like '2025-26' -> previous FY starts 2024-04-01
-      const ayStartYear = parseInt(ay.split('-')[0],10) - 1; // FY start year
-      const ayStart = new Date(ayStartYear,3,1); // April 1 of prev year
+      // determine AY start year from AY select (e.g., '2025-26' -> start 2025-04-01)
+      let ayStartYear = parseInt(ay.split('-')[0],10);
+      const ayStart = new Date(ayStartYear,3,1); // April 1
       const months234B = monthsPart(ayStart.toISOString().slice(0,10), fileReturn);
       const int234B = base234B_rounded * 0.01 * months234B;
 
@@ -200,52 +195,40 @@
       const req3 = assessedTax * 0.75;
       const req4 = assessedTax * 1.00;
 
-      // Determine FY year from AY selection
-      const FYyear = parseInt(ay.split('-')[0],10) - 1; // e.g., AY 2025-26 => FY start 2024
-      const due1 = `${FYyear}-06-15`; // 15 Jun of FY
-      const due2 = `${FYyear}-09-15`; // 15 Sep
-      const due3 = `${FYyear}-12-15`; // 15 Dec
-      const due4 = `${FYyear+1}-03-15`; // 15 Mar of next calendar year
+      // For each due date compute cumulative paid till that due date
+      const yearForDue = new Date(fileReturn).getFullYear();
+      const due1 = yearForDue + '-06-15';
+      const due2 = yearForDue + '-09-15';
+      const due3 = yearForDue + '-12-15';
+      const due4 = (new Date(fileReturn).getMonth() < 3 ? (yearForDue - 1) : yearForDue) + '-03-15';
+      // Note: For March instalment, use AY mapping; but we'll assume due4 in the same AY as other due dates if unclear.
 
-      // For each instalment find cumulative paid till due date, and the date when the required cumulative amount was covered
-      function paidCumulativeTill(date){ return paidTill(date); }
+      const paid1 = paidTill(due1);
+      const paid2 = paidTill(due2);
+      const paid3 = paidTill(due3);
+      const paid4 = paidTill(due4);
 
-      // Helper to find date when cumulative payments reach required cumulative amount (required amount is absolute, not incremental)
-      function dateWhenCumulativeReached(requiredAmount){ if(requiredAmount<=0) return null; let cum=0; for(const p of payments){ cum += Number(p.amount); if(cum >= requiredAmount) return p.date; } return null; }
+      const short1 = Math.max(0, req1 - paid1);
+      const short2 = Math.max(0, req2 - paid2);
+      const short3 = Math.max(0, req3 - paid3);
+      const short4 = Math.max(0, req4 - paid4);
 
-      // For each instalment, required cumulative amount is req1, req2, req3, req4 respectively
-      const paidTillDue1 = paidCumulativeTill(due1);
-      const paidTillDue2 = paidCumulativeTill(due2);
-      const paidTillDue3 = paidCumulativeTill(due3);
-      const paidTillDue4 = paidCumulativeTill(due4);
+      // Per Excel logic: months multipliers: Q1-Q3 => 3 months each; Q4 => 1 month
+      const m1 = short1>0 ? 3 : 0;
+      const m2 = short2>0 ? 3 : 0;
+      const m3 = short3>0 ? 3 : 0;
+      const m4 = short4>0 ? 1 : 0;
 
-      // For interest we need the date when the shortfall got cleared (i.e., when cumulative payments >= required). If never cleared, use filing date
-      const coverDate1 = dateWhenCumulativeReached(req1) || fileReturn || new Date().toISOString().slice(0,10);
-      const coverDate2 = dateWhenCumulativeReached(req2) || fileReturn || new Date().toISOString().slice(0,10);
-      const coverDate3 = dateWhenCumulativeReached(req3) || fileReturn || new Date().toISOString().slice(0,10);
-      const coverDate4 = dateWhenCumulativeReached(req4) || fileReturn || new Date().toISOString().slice(0,10);
-
-      // Shortfalls are required cumulative minus paid till due date
-      const short1 = Math.max(0, req1 - paidTillDue1);
-      const short2 = Math.max(0, req2 - paidTillDue2);
-      const short3 = Math.max(0, req3 - paidTillDue3);
-      const short4 = Math.max(0, req4 - paidTillDue4);
-
-      // Months (part) from day after due date to cover date (or filing date if not covered)
-      const months1 = short1>0 ? monthsPart(addDays(due1,1), coverDate1) : 0;
-      const months2 = short2>0 ? monthsPart(addDays(due2,1), coverDate2) : 0;
-      const months3 = short3>0 ? monthsPart(addDays(due3,1), coverDate3) : 0;
-      const months4 = short4>0 ? monthsPart(addDays(due4,1), coverDate4) : 0;
-
-      const int1 = short1 * 0.01 * months1;
-      const int2 = short2 * 0.01 * months2;
-      const int3 = short3 * 0.01 * months3;
-      const int4 = short4 * 0.01 * months4;
+      const int1 = short1 * 0.01 * m1;
+      const int2 = short2 * 0.01 * m2;
+      const int3 = short3 * 0.01 * m3;
+      const int4 = short4 * 0.01 * m4;
       const int234C = int1 + int2 + int3 + int4;
 
       // 234F late fee: if filed after due date
       let fee234F = 0;
       if (new Date(fileReturn) > new Date(dueReturn)){
+        // Excel used slab on total income
         fee234F = totalIncome > 250000 ? 5000 : 1000;
       }
 
@@ -271,18 +254,18 @@
       out.push('<table>');
       out.push(`<tr><th>Base (assessed tax - total advance)</th><td>${fmt(base234B)}</td></tr>`);
       out.push(`<tr><th>Base rounded to nearest ₹100</th><td>${fmt(base234B_rounded)}</td></tr>`);
-      out.push(`<tr><th>Months from Apr 1 of FY (${ayStart.toISOString().slice(0,10)}) to filing</th><td>${months234B}</td></tr>`);
+      out.push(`<tr><th>Months from Apr 1 of AY (${ayStart.toISOString().slice(0,10)}) to filing</th><td>${months234B}</td></tr>`);
       out.push(`<tr><th>Interest @1%/month</th><td>${fmt(int234B)}</td></tr>`);
       out.push('</table>');
 
       out.push('<h3>Section 234C — Deferment of advance tax (quarterly)</h3>');
       out.push('<table>');
-      out.push(`<tr><th>Instalment</th><th>Due</th><th>Required (cumulative)</th><th>Paid till due</th><th>Shortfall</th><th>Covered on</th><th>Months</th><th>Interest</th></tr>`);
-      out.push(`<tr><td>1</td><td>${due1}</td><td>${fmt(req1)}</td><td>${fmt(paidTillDue1)}</td><td>${fmt(short1)}</td><td>${coverDate1 || 'Not covered'}</td><td>${months1}</td><td>${fmt(int1)}</td></tr>`);
-      out.push(`<tr><td>2</td><td>${due2}</td><td>${fmt(req2)}</td><td>${fmt(paidTillDue2)}</td><td>${fmt(short2)}</td><td>${coverDate2 || 'Not covered'}</td><td>${months2}</td><td>${fmt(int2)}</td></tr>`);
-      out.push(`<tr><td>3</td><td>${due3}</td><td>${fmt(req3)}</td><td>${fmt(paidTillDue3)}</td><td>${fmt(short3)}</td><td>${coverDate3 || 'Not covered'}</td><td>${months3}</td><td>${fmt(int3)}</td></tr>`);
-      out.push(`<tr><td>4</td><td>${due4}</td><td>${fmt(req4)}</td><td>${fmt(paidTillDue4)}</td><td>${fmt(short4)}</td><td>${coverDate4 || 'Not covered'}</td><td>${months4}</td><td>${fmt(int4)}</td></tr>`);
-      out.push(`<tr><th colspan="7">Total 234C interest</th><th>${fmt(int234C)}</th></tr>`);
+      out.push(`<tr><th>Instalment</th><th>Required</th><th>Paid till due</th><th>Shortfall</th><th>Months</th><th>Interest</th></tr>`);
+      out.push(`<tr><td>1 (15 Jun)</td><td>${fmt(req1)}</td><td>${fmt(paid1)}</td><td>${fmt(short1)}</td><td>${m1}</td><td>${fmt(int1)}</td></tr>`);
+      out.push(`<tr><td>2 (15 Sep)</td><td>${fmt(req2)}</td><td>${fmt(paid2)}</td><td>${fmt(short2)}</td><td>${m2}</td><td>${fmt(int2)}</td></tr>`);
+      out.push(`<tr><td>3 (15 Dec)</td><td>${fmt(req3)}</td><td>${fmt(paid3)}</td><td>${fmt(short3)}</td><td>${m3}</td><td>${fmt(int3)}</td></tr>`);
+      out.push(`<tr><td>4 (15 Mar)</td><td>${fmt(req4)}</td><td>${fmt(paid4)}</td><td>${fmt(short4)}</td><td>${m4}</td><td>${fmt(int4)}</td></tr>`);
+      out.push(`<tr><th colspan="5">Total 234C interest</th><th>${fmt(int234C)}</th></tr>`);
       out.push('</table>');
 
       out.push('<h3>Section 234F — Late filing fee</h3>');
@@ -298,31 +281,59 @@
       out.push(`<tr><th>Payable (interest + fee)</th><td>${fmt(totalInterest + fee234F)}</td></tr>`);
       out.push('</table>');
 
-      $('output').innerHTML = out.join('
-');
+      $('output').innerHTML = out.join('\n');
     });
 
     // CSV download of payments and summary
     $('download').addEventListener('click', ()=>{
       if(payments.length===0){ alert('No payments to download'); return; }
-      let csv = 'date,amount
-'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}
-`);
+      let csv = 'date,amount\n'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}\n`);
       const blob = new Blob([csv], {type:'text/csv'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'payments.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     });
 
-    // Email buttons (frontend placeholders)
-    document.getElementById('emailPdfBtn').addEventListener('click', ()=>{
-      alert('Will generate PDF and send via your backend. I can provide a ready-to-run Node/Flask backend if you want.');
-    });
-    document.getElementById('emailExcelBtn').addEventListener('click', ()=>{
-      alert('Will generate Excel and send via your backend. I can provide a ready-to-run Node/Flask backend if you want.');
-    });
-
     // initial render
     renderPayments();
+  </script>
+  <!-- Email Buttons -->
+  <div class="email-actions">
+    <button id="emailPdfBtn">Email PDF Report</button>
+    <button id="emailExcelBtn">Email Excel Report</button>
+  </div>
+
+  <script>
+    // --- EMAIL REPORT BUTTONS (placeholders for backend integration) ---
+
+    document.getElementById('emailPdfBtn').addEventListener('click', () => {
+      alert('PDF email functionality will connect to your backend API.');
+      // Example: sendReport('pdf');
+    });
+
+    document.getElementById('emailExcelBtn').addEventListener('click', () => {
+      alert('Excel email functionality will connect to your backend API.');
+      // Example: sendReport('excel');
+    });
+
+    // --- Example structure for backend call ---
+    function sendReport(type) {
+      fetch('/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: type, data: collectReportData() })
+      })
+      .then(r => r.json())
+      .then(res => alert(res.message));
+    }
+
+    // --- Example harvest function (can be expanded) ---
+    function collectReportData() {
+      return {
+        taxableIncome: document.getElementById('taxableIncome')?.value || '',
+        payments: getPaymentRows?.() || [],
+        results: document.getElementById('resultSection')?.innerText || ''
+      };
+    }
   </script>
 </body>
 </html>
