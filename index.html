@@ -83,10 +83,23 @@
         <button id="addPayment" style="background:#2563eb;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Add Payment</button>
 <button id="clearPayments" style="background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Clear All</button>
 
-<table id="paymentsTable">
-          <thead><tr><th>Date</th><th>Amount (₹)</th><th></th></tr></thead>
-          <tbody id="paymentsBody"></tbody>
-        </table>
+<div style="margin:10px 0; font-weight:bold;">Advance tax / Other payments (add multiple rows)<br>Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
+
+<button id="addPayment" style="background:#2563eb;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Add Payment</button>
+<button id="clearPayments" style="background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Clear All</button>
+
+<table id="paymentsTable" style="width:100%; border-collapse:collapse; margin-top:10px;">
+  <thead>
+    <tr>
+      <th style="border:1px solid #ccc; padding:6px;">Date</th>
+      <th style="border:1px solid #ccc; padding:6px;">Amount (₹)</th>
+      <th style="border:1px solid #ccc; padding:6px;">Action</th>
+    </tr>
+  </thead>
+  <tbody id="paymentsBody">
+    <tr><td colspan="3" class="muted" style="text-align:center; padding:6px;">No payments entered</td></tr>
+  </tbody>
+</table>
         <div style="margin-top:8px" class="actions">
           <button type="button" id="addPayment">Add payment</button>
           <button type="button" id="clearPayments" class="secondary">Clear payments</button>
