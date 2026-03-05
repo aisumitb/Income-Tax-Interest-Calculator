@@ -97,10 +97,7 @@
     <tr><td colspan="3" class="muted" style="text-align:center; padding:6px;">No payments entered</td></tr>
   </tbody>
 </table>
-        <div style="margin-top:8px" class="actions">
-          <button type="button" id="addPayment">Add payment</button>
-          <button type="button" id="clearPayments" class="secondary">Clear payments</button>
-        </div>
+        
       </div>
 
       <div class="card actions">
@@ -144,21 +141,29 @@
       paymentsBody.appendChild(tr);
     }); if(payments.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=3; td.className='muted'; td.textContent='No payments entered'; tr.appendChild(td); paymentsBody.appendChild(tr);} }
 
-    $('addPayment').onclick = () => {
-      const date = prompt('Payment date (YYYY-MM-DD)');
-      if (!date) return;
-      const iso = dateISO(date);
-      if (!iso) { alert('Invalid date'); return; }
-      const amtStr = prompt('Amount (₹)');
-      if (!amtStr) return;
-      const amt = toNum(amtStr);
-      if (amt <= 0) { alert('Enter positive amount'); return; }
-      payments.push({date: iso, amount: amt});
-      payments.sort((a,b)=> new Date(a.date)-new Date(b.date));
-      renderPayments();
-    }();
-    });
+    $('addPayment').addEventListener('click', () => {
+  const date = prompt('Payment date (YYYY-MM-DD)');
+  if (!date) return;
 
+  const iso = dateISO(date);
+  if (!iso) { 
+    alert('Invalid date'); 
+    return; 
+  }
+
+  const amtStr = prompt('Amount (₹)');
+  if (!amtStr) return;
+
+  const amt = toNum(amtStr);
+  if (amt <= 0) { 
+    alert('Enter positive amount'); 
+    return; 
+  }
+
+  payments.push({ date: iso, amount: amt });
+  payments.sort((a,b)=> new Date(a.date)-new Date(b.date));
+  renderPayments();
+});
     $('clearPayments').addEventListener('click', ()=>{ if(confirm('Clear all payments?')){ payments.length=0; renderPayments(); } });
 
     $('reset').addEventListener('click', ()=>{
@@ -209,6 +214,9 @@
       const ayStart = new Date(ayStartYear,3,1); // April 1
       const months234B = monthsPart(ayStart.toISOString().slice(0,10), fileReturn);
       const int234B = base234B_rounded * 0.01 * months234B;
+      if (totalAdvance >= 0.9 * assessedTax) {
+  base234B = 0;
+}
 
       // 234C: instalment required percentages applied on assessedTax
       const req1 = assessedTax * 0.15;
@@ -312,8 +320,7 @@
       out.push(`<tr><th>Payable (interest + fee)</th><td>${fmt(totalInterest + fee234F)}</td></tr>`);
       out.push('</table>');
 
-      $('output').innerHTML = out.join('
-');
+      $('output').innerHTML = out.join('\n');
     });
 
     // CSV download of payments and summary
