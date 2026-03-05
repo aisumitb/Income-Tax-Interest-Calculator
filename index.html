@@ -82,9 +82,9 @@
         <div class="muted small">Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
         <div style="margin:10px 0; font-weight:bold;">Advance tax / Other payments (add multiple rows)<br>Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
 
-<button id="addPayment" style="background:#2563eb;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Add Payment</button>
-<button id="clearPayments" style="background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Clear All</button>
+<button type="button" id="addPayment" style="background:#2563eb;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Add Payment</button>
 
+<button type="button" id="clearPayments" style="background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Clear All</button>
 <table id="paymentsTable" style="width:100%; border-collapse:collapse; margin-top:10px;">
   <thead>
     <tr>
@@ -206,18 +206,23 @@
       const months234A = monthsPart(dueNext.toISOString().slice(0,10), fileReturn);
       const int234A = short234A * 0.01 * months234A;
 
-      // 234B: base = round(max(assessedTax - totalAdvance,0), -2)
       let base234B = Math.max(assessedTax - totalAdvance, 0);
-      const base234B_rounded = roundNearest100(base234B);
-      // months from Apr 1 of AY to filing date
-      let ayStartYear = parseInt(ay.split('-')[0],10);
-      const ayStart = new Date(ayStartYear,3,1); // April 1
-      const months234B = monthsPart(ayStart.toISOString().slice(0,10), fileReturn);
-      const int234B = base234B_rounded * 0.01 * months234B;
-      if (totalAdvance >= 0.9 * assessedTax) {
+
+if (totalAdvance >= 0.9 * assessedTax) {
   base234B = 0;
 }
 
+const base234B_rounded = roundNearest100(base234B);
+
+let ayStartYear = parseInt(ay.split('-')[0],10);
+const ayStart = new Date(ayStartYear,3,1);
+
+const months234B = monthsPart(
+  ayStart.toISOString().slice(0,10),
+  fileReturn
+);
+
+const int234B = base234B_rounded * 0.01 * months234B;
       // 234C: instalment required percentages applied on assessedTax
       const req1 = assessedTax * 0.15;
       const req2 = assessedTax * 0.45;
@@ -324,16 +329,28 @@
     });
 
     // CSV download of payments and summary
-    $('download').addEventListener('click', ()=>{
-      if(payments.length===0){ alert('No payments to download'); return; }
-      let csv = 'date,amount
-'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}
-`);
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'payments.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    });
+   $('download').addEventListener('click', ()=>{
+  if(payments.length===0){ 
+    alert('No payments to download'); 
+    return; 
+  }
 
+  let csv = 'date,amount\n';
+
+  payments.forEach(p => {
+    csv += `${p.date},${Number(p.amount).toFixed(2)}\n`;
+  });
+
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'payments.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
     // initial render
     renderPayments();
   </script>
