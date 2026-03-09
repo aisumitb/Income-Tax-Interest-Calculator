@@ -244,10 +244,10 @@
       const due3Next = new Date(due3); due3Next.setDate(due3Next.getDate()+1);
       const due4Next = new Date(due4); due4Next.setDate(due4Next.getDate()+1);
 
-      const months1 = short1>0 ? monthsPart(due1Next.toISOString().slice(0,10), payDate1) : 0;
-      const months2 = short2>0 ? monthsPart(due2Next.toISOString().slice(0,10), payDate2) : 0;
-      const months3 = short3>0 ? monthsPart(due3Next.toISOString().slice(0,10), payDate3) : 0;
-      const months4 = short4>0 ? monthsPart(due4Next.toISOString().slice(0,10), payDate4) : 0;
+      const months1 = short1>0 ? Math.min(3, monthsPart(due1Next.toISOString().slice(0,10), payDate1)) : 0;
+      const months2 = short2>0 ? Math.min(3, monthsPart(due2Next.toISOString().slice(0,10), payDate2)) : 0;
+      const months3 = short3>0 ? Math.min(3, monthsPart(due3Next.toISOString().slice(0,10), payDate3)) : 0;
+      const months4 = short4>0 ? Math.min(1, monthsPart(due4Next.toISOString().slice(0,10), payDate4)) : 0;
 
       const int1 = short1 * 0.01 * months1;
       const int2 = short2 * 0.01 * months2;
@@ -310,14 +310,16 @@
       out.push(`<tr><th>Payable (interest + fee)</th><td>${fmt(totalInterest + fee234F)}</td></tr>`);
       out.push('</table>');
 
-      $('output').innerHTML = out.join('\n');
+      $('output').innerHTML = out.join('
+');
     });
 
     // CSV download of payments and summary
     $('download').addEventListener('click', ()=>{
       if(payments.length===0){ alert('No payments to download'); return; }
-      let csv = 'date,amount\n';
-payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}\n`);
+      let csv = 'date,amount
+'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}
+`);
       const blob = new Blob([csv], {type:'text/csv'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'payments.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
