@@ -1,47 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Income Tax Interest Calculator</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>IT Interest Calculator — Exact Excel Logic (Multi-payment)</title>
 <style>
-body { font-family: Arial; background:#f5f5f5; padding:20px; }
-.card { background:white; padding:20px; border-radius:8px; max-width:800px; margin:auto; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-input, select, button { padding:8px; margin:6px 0; width:100%; }
-button { cursor:pointer; }
-.primary { background:#2563eb; color:white; border:none; }
-.danger { background:#ef4444; color:white; border:none; }
-table { width:100%; border-collapse:collapse; margin-top:10px;}
-th, td { border:1px solid #ddd; padding:6px; text-align:center; }
-.result { background:#f0f9ff; padding:10px; margin-top:15px; border-radius:6px;}
+body{font-family:Inter,system-ui,Arial;background:#f4f6f8;color:#102027;margin:0;padding:20px}
+.wrap{max-width:1100px;margin:20px auto}
+.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 6px 20px rgba(16,32,40,.06);margin-bottom:16px}
+h1{margin:0 0 8px;font-size:20px}
+label{display:block;font-size:13px;color:#556;margin-bottom:6px}
+input[type="number"],input[type="date"],select{width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef2}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #eef3f5;text-align:left;font-size:13px}
+button{background:#0ea5a4;border:0;color:white;padding:8px 10px;border-radius:6px;cursor:pointer}
+.muted{color:#6b7880;font-size:13px}
+.out{background:#f8fafb;border-radius:8px;padding:12px;margin-top:12px}
+.small{font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.danger{background:#ef4444}
+.secondary{background:#64748b}
+.primary{background:#2563eb}
 </style>
 </head>
 <body>
+<div class="wrap">
 
 <div class="card">
+<h1>Income-tax Interest Calculator — Exact Excel Logic (Multi-payment)</h1>
+<div class="muted small">Month-or-part rule, ROUND to nearest ₹100 for 234B base, cumulative payment logic and quarterly 234C computation.</div>
+</div>
 
-<h2>Income Tax Interest Calculator</h2>
+<form id="frm">
 
+<div class="card grid">
+<div>
+<label>Total tax payable (₹)</label>
+<input id="taxPayable" type="number" value="0">
+</div>
+<div>
+<label>TDS / TCS / Other credits (₹)</label>
+<input id="tds" type="number" value="0">
+</div>
+<div>
+<label>Reliefs / MAT / AMT credit (₹)</label>
+<input id="relief" type="number" value="0">
+</div>
+</div>
+
+<div class="card grid">
+<div>
+<label>Self-assessment tax paid before due date (₹)</label>
+<input id="selfTax" type="number" value="0">
+</div>
+<div>
+<label>Total income (for 234F slab)</label>
+<input id="totalIncome" type="number" value="0">
+</div>
+<div>
 <label>Assessment Year</label>
-<input type="text" id="ay" placeholder="2024-25">
+<select id="ay">
+<option>2024-25</option>
+<option>2025-26</option>
+<option>2026-27</option>
+</select>
+</div>
+</div>
 
-<label>Assessed Tax</label>
-<input type="number" id="assessedTax">
+<div class="card grid-2">
+<div>
+<label>Due date of return</label>
+<input id="dueReturn" type="date">
+</div>
+<div>
+<label>Date of filing return</label>
+<input id="fileReturn" type="date">
+</div>
+</div>
 
-<label>Return Filing Date</label>
-<input type="date" id="filingDate">
+<div class="card">
+<h3>Advance tax / Other payments</h3>
+<div class="muted">Enter each payment date and amount.</div>
 
-<hr>
-
-<h3>Advance Tax Payments</h3>
-
-<button type="button" class="primary" id="addPayment">Add Payment</button>
-<button type="button" class="danger" id="clearPayments">Clear All</button>
+<button type="button" id="addPayment" class="primary">Add Payment</button>
+<button type="button" id="clearPayments" class="secondary">Clear Payments</button>
 
 <table>
 <thead>
 <tr>
 <th>Date</th>
-<th>Amount</th>
+<th>Amount (₹)</th>
 <th>Action</th>
 </tr>
 </thead>
@@ -49,111 +99,188 @@ th, td { border:1px solid #ddd; padding:6px; text-align:center; }
 <tr><td colspan="3">No payments entered</td></tr>
 </tbody>
 </table>
+</div>
 
-<hr>
+<div class="card actions">
+<button type="button" id="compute">Compute Interest</button>
+<button type="button" id="download" class="secondary">Download CSV</button>
+<button type="button" id="reset" class="danger">Reset</button>
+</div>
 
-<button type="button" class="primary" id="compute">Compute Interest</button>
+</form>
 
-<div id="result" class="result"></div>
+<div id="output" class="card out"></div>
 
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
 
-const $ = (id)=>document.getElementById(id);
+const $=id=>document.getElementById(id)
+function toNum(v){return isNaN(Number(v))?0:Number(v)}
+function fmt(x){return "₹ "+Number(x).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function roundNearest100(x){return Math.round(x/100)*100}
 
-function toNum(v){ return isNaN(Number(v))?0:Number(v); }
-function round100(x){ return Math.round(x/100)*100; }
+function dateISO(d){if(!d)return null;const dt=new Date(d);if(isNaN(dt))return null;return dt.toISOString().slice(0,10)}
 
-function monthsBetween(a,b){
-  const A=new Date(a);
-  const B=new Date(b);
-  if(isNaN(A)||isNaN(B)||B<=A) return 0;
-  return Math.ceil((B-A)/(1000*60*60*24*30));
-}
+function daysBetween(a,b){const A=new Date(a);const B=new Date(b);return Math.ceil((B-A)/(1000*60*60*24))}
+function monthsPart(a,b){const days=daysBetween(a,b);if(days<=0)return 0;return Math.ceil(days/30)}
 
-let payments=[];
+const payments=[]
 
 function renderPayments(){
-  const body=$('paymentsBody');
-  body.innerHTML='';
-  if(payments.length===0){
-    body.innerHTML='<tr><td colspan="3">No payments entered</td></tr>';
-    return;
-  }
-  payments.forEach((p,i)=>{
-    body.innerHTML+=`
-      <tr>
-        <td>${p.date}</td>
-        <td>${p.amount.toFixed(2)}</td>
-        <td><button type="button" data-i="${i}" class="removeBtn">Remove</button></td>
-      </tr>`;
-  });
+const body=$('paymentsBody')
+body.innerHTML=""
 
-  document.querySelectorAll('.removeBtn').forEach(btn=>{
-    btn.onclick=function(){
-      payments.splice(this.dataset.i,1);
-      renderPayments();
-    }
-  });
+if(payments.length===0){
+body.innerHTML='<tr><td colspan="3">No payments entered</td></tr>'
+return
 }
+
+payments.forEach((p,i)=>{
+body.innerHTML+=`<tr>
+<td>${p.date}</td>
+<td>${p.amount.toFixed(2)}</td>
+<td><button onclick="removePayment(${i})" class="danger">Remove</button></td>
+</tr>`
+})
+}
+
+function removePayment(i){payments.splice(i,1);renderPayments()}
 
 $('addPayment').onclick=function(){
-  const d=prompt("Payment Date (YYYY-MM-DD)");
-  if(!d) return;
-  const a=prompt("Amount");
-  if(!a) return;
-  payments.push({date:d,amount:toNum(a)});
-  renderPayments();
+const d=prompt("Payment date (YYYY-MM-DD)")
+if(!d)return
+const a=prompt("Amount (₹)")
+if(!a)return
+payments.push({date:d,amount:toNum(a)})
+payments.sort((a,b)=>new Date(a.date)-new Date(b.date))
+renderPayments()
 }
 
-$('clearPayments').onclick=function(){
-  payments=[];
-  renderPayments();
+$('clearPayments').onclick=function(){payments.length=0;renderPayments()}
+
+function paidTill(date){
+let sum=0
+const D=new Date(date)
+payments.forEach(p=>{if(new Date(p.date)<=D)sum+=p.amount})
+return sum
+}
+
+function dateWhenCumulativeAtLeast(target){
+let cum=0
+for(const p of payments){cum+=p.amount;if(cum>=target)return p.date}
+return null
 }
 
 $('compute').onclick=function(){
 
-  const assessed=toNum($('assessedTax').value);
-  const filing=$('filingDate').value;
-  const ay=$('ay').value;
+const taxPayable=toNum($('taxPayable').value)
+const tds=toNum($('tds').value)
+const relief=toNum($('relief').value)
+const selfTax=toNum($('selfTax').value)
+const totalIncome=toNum($('totalIncome').value)
+const dueReturn=dateISO($('dueReturn').value)
+const fileReturn=dateISO($('fileReturn').value)
+const ay=$('ay').value
 
-  if(!assessed||!filing||!ay){
-    alert("Fill all fields");
-    return;
-  }
+if(!dueReturn||!fileReturn){alert("Enter due date and filing date");return}
 
-  const totalAdvance=payments.reduce((s,p)=>s+p.amount,0);
+let assessedTax=Math.max(taxPayable-tds-relief,0)
+const totalAdvance=payments.reduce((s,p)=>s+p.amount,0)
+const paidUpToFiling=paidTill(fileReturn)
 
-  // 234B
-  let base234B=Math.max(assessed-totalAdvance,0);
-  if(totalAdvance>=0.9*assessed) base234B=0;
-  base234B=round100(base234B);
+let short234A=Math.max(assessedTax-(selfTax+paidUpToFiling),0)
 
-  const ayStartYear=parseInt(ay.split('-')[0]);
-  const startDate=ayStartYear+"-04-01";
-  const months234B=monthsBetween(startDate,filing);
-  const int234B=base234B*0.01*months234B;
+const dueNext=new Date(dueReturn)
+dueNext.setDate(dueNext.getDate()+1)
 
-  // Simple 234A
-  const dueDate=ayStartYear+"-07-31";
-  const months234A=monthsBetween(dueDate,filing);
-  const int234A=assessed*0.01*months234A;
+const months234A=monthsPart(dueNext,fileReturn)
+const int234A=short234A*0.01*months234A
 
-  const totalInterest=int234A+int234B;
+let base234B=Math.max(assessedTax-totalAdvance,0)
+const base234B_rounded=roundNearest100(base234B)
 
-  $('result').innerHTML=`
-    <b>Total Advance Paid:</b> ₹ ${totalAdvance.toFixed(2)}<br>
-    <b>234A Interest:</b> ₹ ${int234A.toFixed(2)}<br>
-    <b>234B Interest:</b> ₹ ${int234B.toFixed(2)}<br>
-    <b>Total Interest:</b> ₹ ${totalInterest.toFixed(2)}
-  `;
+const ayStartYear=parseInt(ay.split('-')[0])
+const ayStart=ayStartYear+"-04-01"
+
+const months234B=monthsPart(ayStart,fileReturn)
+const int234B=base234B_rounded*0.01*months234B
+
+const req1=assessedTax*0.15
+const req2=assessedTax*0.45
+const req3=assessedTax*0.75
+const req4=assessedTax
+
+const due1=ayStartYear+"-06-15"
+const due2=ayStartYear+"-09-15"
+const due3=ayStartYear+"-12-15"
+const due4=(ayStartYear+1)+"-03-15"
+
+const paid1=paidTill(due1)
+const paid2=paidTill(due2)
+const paid3=paidTill(due3)
+const paid4=paidTill(due4)
+
+const short1=Math.max(0,req1-paid1)
+const short2=Math.max(0,req2-paid2)
+const short3=Math.max(0,req3-paid3)
+const short4=Math.max(0,req4-paid4)
+
+const payDate1=short1>0?(dateWhenCumulativeAtLeast(req1)||fileReturn):null
+const payDate2=short2>0?(dateWhenCumulativeAtLeast(req2)||fileReturn):null
+const payDate3=short3>0?(dateWhenCumulativeAtLeast(req3)||fileReturn):null
+const payDate4=short4>0?(dateWhenCumulativeAtLeast(req4)||fileReturn):null
+
+const months1=short1?monthsPart(due1,payDate1):0
+const months2=short2?monthsPart(due2,payDate2):0
+const months3=short3?monthsPart(due3,payDate3):0
+const months4=short4?monthsPart(due4,payDate4):0
+
+const int234C=(short1*.01*months1)+(short2*.01*months2)+(short3*.01*months3)+(short4*.01*months4)
+
+let fee234F=0
+if(new Date(fileReturn)>new Date(dueReturn)){
+fee234F=totalIncome>250000?5000:1000
 }
 
-renderPayments();
+const totalInterest=int234A+int234B+int234C
 
-});
+$('output').innerHTML=`
+<h3>Computation Summary</h3>
+<b>Assessed Tax:</b> ${fmt(assessedTax)}<br>
+<b>Total Advance Paid:</b> ${fmt(totalAdvance)}<br><br>
+
+<b>Interest u/s 234A:</b> ${fmt(int234A)}<br>
+<b>Interest u/s 234B:</b> ${fmt(int234B)}<br>
+<b>Interest u/s 234C:</b> ${fmt(int234C)}<br>
+
+<b>Total Interest:</b> ${fmt(totalInterest)}<br>
+<b>Late Fee u/s 234F:</b> ${fmt(fee234F)}
+`
+}
+
+$('download').onclick=function(){
+if(payments.length===0){alert("No payments");return}
+let csv="date,amount\n"
+payments.forEach(p=>csv+=`${p.date},${p.amount}\n`)
+const blob=new Blob([csv],{type:'text/csv'})
+const url=URL.createObjectURL(blob)
+const a=document.createElement('a')
+a.href=url
+a.download="payments.csv"
+a.click()
+URL.revokeObjectURL(url)
+}
+
+$('reset').onclick=function(){
+document.getElementById('frm').reset()
+payments.length=0
+renderPayments()
+$('output').innerHTML=""
+}
+
+renderPayments()
+
 </script>
 
 </body>
