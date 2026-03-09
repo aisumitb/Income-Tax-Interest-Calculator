@@ -317,9 +317,7 @@
     // CSV download of payments and summary
     $('download').addEventListener('click', ()=>{
       if(payments.length===0){ alert('No payments to download'); return; }
-      let csv = 'date,amount
-'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}
-`);
+      let csv = 'date,amount\n'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}\n`);
       const blob = new Blob([csv], {type:'text/csv'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'payments.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
