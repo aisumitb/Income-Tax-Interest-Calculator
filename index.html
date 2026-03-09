@@ -82,8 +82,7 @@
         <div class="muted small">Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
         <div style="margin:10px 0; font-weight:bold;">Advance tax / Other payments (add multiple rows)<br>Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
 
-<button id="addPayment" style="background:#2563eb;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Add Payment</button>
-<button id="clearPayments" style="background:#ef4444;color:white;border:0;padding:8px 12px;border-radius:6px;margin-bottom:10px;">Clear All</button>
+
 
 <table id="paymentsTable" style="width:100%; border-collapse:collapse; margin-top:10px;">
   <thead>
@@ -156,8 +155,7 @@
       payments.push({date: iso, amount: amt});
       payments.sort((a,b)=> new Date(a.date)-new Date(b.date));
       renderPayments();
-    }();
-    });
+    };
 
     $('clearPayments').addEventListener('click', ()=>{ if(confirm('Clear all payments?')){ payments.length=0; renderPayments(); } });
 
