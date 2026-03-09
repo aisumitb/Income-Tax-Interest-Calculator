@@ -310,8 +310,7 @@
       out.push(`<tr><th>Payable (interest + fee)</th><td>${fmt(totalInterest + fee234F)}</td></tr>`);
       out.push('</table>');
 
-      $('output').innerHTML = out.join('
-');
+      $('output').innerHTML = out.join('\n');
     });
 
     // CSV download of payments and summary
