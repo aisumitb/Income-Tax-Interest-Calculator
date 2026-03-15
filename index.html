@@ -1,314 +1,365 @@
-
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Income-tax Interest Calculator</title>
-
-<style>
-body{font-family:Arial;background:#f4f6f8;margin:0;padding:20px;color:#102027}
-.wrap{max-width:1100px;margin:auto}
-.card{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 6px 20px rgba(0,0,0,0.08)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-input,select{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
-button{background:#0ea5a4;color:white;border:0;padding:8px 12px;border-radius:6px;cursor:pointer}
-table{width:100%;border-collapse:collapse}
-th,td{border-bottom:1px solid #eee;padding:8px;font-size:13px;text-align:left}
-.actions{display:flex;gap:8px;margin-top:10px}
-.out{background:#f8fafb;border-radius:8px;padding:12px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IT Interest Calculator — Exact Excel Logic (Multi-payment)</title>
+  <style>
+    body{font-family:Inter, system-ui, Arial; background:#f4f6f8;color:#102027;margin:0;padding:20px}
+    .wrap{max-width:1100px;margin:20px auto}
+    .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 6px 20px rgba(16,32,40,0.06);margin-bottom:16px}
+    h1{margin:0 0 8px;font-size:20px}
+    label{display:block;font-size:13px;color:#556; margin-bottom:6px}
+    input[type="number"], input[type="date"], select{width:100%;padding:8px;border-radius:6px;border:1px solid #e6eef2}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eef3f5;text-align:left;font-size:13px}
+    button{background:#0ea5a4;border:0;color:white;padding:8px 10px;border-radius:6px;cursor:pointer}
+    .muted{color:#6b7880;font-size:13px}
+    .out{background:#f8fafb;border-radius:8px;padding:12px;margin-top:12px}
+    .small{font-size:13px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .danger{background:#ef4444}
+    .secondary{background:#64748b}
+  </style>
 </head>
-
 <body>
-<div class="wrap">
+  <div class="wrap">
+    <div class="card">
+      <h1>Income-tax Interest Calculator — Exact Excel Logic (Multi-payment)</h1>
+      
+    </div>
 
-<div class="card">
-<h2>Income-tax Interest Calculator (Sections 234A / 234B / 234C / 234F)</h2>
-</div>
+    <form id="frm">
+      <div class="card grid">
+        <div>
+          <label>Total tax payable (₹)</label>
+          <input id="taxPayable" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>TDS / TCS / Other credits (₹)</label>
+          <input id="tds" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Reliefs / MAT / AMT credit (₹)</label>
+          <input id="relief" type="number" step="0.01" value="0">
+        </div>
+      </div>
 
-<form id="frm">
+      <div class="card grid">
+        <div>
+          <label>Self-assessment tax paid on or before due date (₹)</label>
+          <input id="selfTax" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Total income (for 234F slab) (₹)</label>
+          <input id="totalIncome" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Assessment Year (AY)</label>
+          <select id="ay">
+            <option value="2024-25">2024-25</option>
+            <option value="2025-26">2025-26</option>
+            <option value="2026-27">2026-27</option>
+          </select>
+        </div>
+      </div>
 
-<div class="card grid">
-<div>
-<label>Total Tax Payable</label>
-<input id="taxPayable" type="number">
-</div>
+      <div class="card grid-2">
+        <div>
+          <label>Due date of return (under section 139(1))</label>
+          <input id="dueReturn" type="date">
+        </div>
+        <div>
+          <label>Actual date of filing return</label>
+          <input id="fileReturn" type="date">
+        </div>
+      </div>
 
-<div>
-<label>TDS / TCS</label>
-<input id="tds" type="number">
-</div>
+      <div class="card">
+        <h3>Advance tax / Other payments (add multiple rows)</h3>
+        <div class="muted small">Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
+        <div style="margin:10px 0; font-weight:bold;">Advance tax / Other payments (add multiple rows)<br>Enter each payment's date and amount. The calculator uses cumulative amounts up to relevant due dates.</div>
 
-<div>
-<label>Relief / MAT Credit</label>
-<input id="relief" type="number">
-</div>
-</div>
 
-<div class="card grid">
-<div>
-<label>Self Assessment Tax</label>
-<input id="selfTax" type="number">
-</div>
 
-<div>
-<label>Total Income</label>
-<input id="totalIncome" type="number">
-</div>
-
-<div>
-<label>Assessment Year</label>
-<select id="ay">
-<option>2024-25</option>
-<option>2025-26</option>
-<option>2026-27</option>
-</select>
-</div>
-</div>
-
-<div class="card grid2">
-<div>
-<label>Return Due Date</label>
-<input id="dueReturn" type="date">
-</div>
-
-<div>
-<label>Actual Filing Date</label>
-<input id="fileReturn" type="date">
-</div>
-</div>
-
-<div class="card">
-<h3>Advance Tax Payments</h3>
-
-<table>
-<thead>
-<tr>
-<th>Date</th>
-<th>Amount</th>
-<th>Action</th>
-</tr>
-</thead>
-
-<tbody id="paymentsBody">
-<tr><td colspan="3">No payments entered</td></tr>
-</tbody>
+<table id="paymentsTable" style="width:100%; border-collapse:collapse; margin-top:10px;">
+  <thead>
+    <tr>
+      <th style="border:1px solid #ccc; padding:6px;">Date</th>
+      <th style="border:1px solid #ccc; padding:6px;">Amount (₹)</th>
+      <th style="border:1px solid #ccc; padding:6px;">Action</th>
+    </tr>
+  </thead>
+  <tbody id="paymentsBody">
+    <tr><td colspan="3" class="muted" style="text-align:center; padding:6px;">No payments entered</td></tr>
+  </tbody>
 </table>
+        <div style="margin-top:8px" class="actions">
+          <button type="button" id="addPayment">Add payment</button>
+          <button type="button" id="clearPayments" class="secondary">Clear payments</button>
+        </div>
+      </div>
 
-<div class="actions">
-<button type="button" id="addPayment">Add Payment</button>
-<button type="button" id="clearPayments">Clear</button>
-</div>
-</div>
+      <div class="card actions">
+        <button type="button" id="compute">Compute interest (234A/234B/234C/234F)</button>
+        <button type="button" id="download" class="secondary">Download report (CSV)</button>
+        <button type="button" id="reset" class="danger">Reset all</button>
+      </div>
+    </form>
 
-<div class="card actions">
-<button type="button" id="compute">Compute Interest</button>
-<button type="button" id="reset">Reset</button>
-</div>
+    <div id="output" class="card out" aria-live="polite"></div>
+  </div>
 
-</form>
+  <script>
+    // Utilities
+    const $ = (id)=>document.getElementById(id);
+    function toNum(v){ const n = Number(v); return isNaN(n)?0:n; }
+    function fmt(x){ return '₹ ' + Number(x).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-<div id="output" class="card out"></div>
+    // Round to nearest 100 as Excel ROUND(x,-2)
+    function roundNearest100(x){ return Math.round(x/100)*100; }
 
-</div>
+    function dateISO(d){ if(!d) return null; const dt = new Date(d); if (isNaN(dt)) return null; return dt.toISOString().slice(0,10); }
 
-<script>
+    // days between a and b -> ceil diff/ (24h) as used earlier
+    function daysBetween(a,b){ const A=new Date(a); const B=new Date(b); if (isNaN(A)||isNaN(B)) return NaN; const diff=B.getTime()-A.getTime(); return Math.ceil(diff/(1000*60*60*24)); }
+    // months or part thereof between a (exclusive) and b (inclusive) -> ceil(days/30)
+    function monthsPart(a,b){ const days = daysBetween(a,b); if (isNaN(days) || days<=0) return 0; return Math.ceil(days/30); }
 
-const $ = id => document.getElementById(id);
+    // Payments logic
+    const payments = [];
+    const paymentsBody = $('paymentsBody');
 
-function num(v){return Number(v)||0}
+    function renderPayments(){ paymentsBody.innerHTML=''; payments.forEach((p,idx)=>{
+      const tr=document.createElement('tr');
+      const tdDate=document.createElement('td'); tdDate.textContent = p.date || '';
+      const tdAmt=document.createElement('td'); tdAmt.textContent = p.amount ? Number(p.amount).toFixed(2) : '';
+      const tdAct=document.createElement('td');
+      const btnDel=document.createElement('button'); btnDel.textContent='Remove'; btnDel.style.background='#ef4444'; btnDel.style.color='white'; btnDel.style.border='0'; btnDel.style.padding='6px 8px'; btnDel.style.borderRadius='6px'; btnDel.onclick=()=>{ payments.splice(idx,1); renderPayments(); };
+      tdAct.appendChild(btnDel);
+      tr.appendChild(tdDate); tr.appendChild(tdAmt); tr.appendChild(tdAct);
+      paymentsBody.appendChild(tr);
+    }); if(payments.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=3; td.className='muted'; td.textContent='No payments entered'; tr.appendChild(td); paymentsBody.appendChild(tr);} }
 
-function fmt(v){
-return "₹ "+Number(v).toLocaleString("en-IN",{minimumFractionDigits:2})
-}
+    $('addPayment').onclick = () => {
+      const date = prompt('Payment date (YYYY-MM-DD)');
+      if (!date) return;
+      const iso = dateISO(date);
+      if (!iso) { alert('Invalid date'); return; }
+      const amtStr = prompt('Amount (₹)');
+      if (!amtStr) return;
+      const amt = toNum(amtStr);
+      if (amt <= 0) { alert('Enter positive amount'); return; }
+      payments.push({date: iso, amount: amt});
+      payments.sort((a,b)=> new Date(a.date)-new Date(b.date));
+      renderPayments();
+    };
 
-function days(a,b){
-return Math.ceil((new Date(b)-new Date(a))/(1000*60*60*24))
-}
+    $('clearPayments').addEventListener('click', ()=>{ if(confirm('Clear all payments?')){ payments.length=0; renderPayments(); } });
 
-function months(a,b){
-let d=days(a,b)
-if(d<=0) return 0
-return Math.ceil(d/30)
-}
+    $('reset').addEventListener('click', ()=>{
+      if(!confirm('Reset all inputs?')) return;
+      document.getElementById('frm').reset(); payments.length=0; renderPayments(); $('output').innerHTML='';
+    });
 
-function round100(x){
-return Math.round(x/100)*100
-}
+    // compute cumulative payments up to a date (inclusive)
+    function paidTill(date){ if(!date) return 0; const D=new Date(date); let sum=0; payments.forEach(p=>{ const pd=new Date(p.date); if (!isNaN(pd) && pd.getTime() <= D.getTime()) sum += Number(p.amount); }); return sum; }
 
-let payments=[]
+    // find date when cumulative payments become >= target; returns date string or null
+    function dateWhenCumulativeAtLeast(target){ let cum=0; for(const p of payments){ cum += Number(p.amount); if (cum >= target) return p.date; } return null; }
 
-function renderPayments(){
+    // Main compute
+    $('compute').addEventListener('click', ()=>{
+      const taxPayable = toNum($('taxPayable').value);
+      const tds = toNum($('tds').value);
+      const relief = toNum($('relief').value);
+      const selfTax = toNum($('selfTax').value);
+      const totalIncome = toNum($('totalIncome').value);
+      const dueReturn = dateISO($('dueReturn').value);
+      const fileReturn = dateISO($('fileReturn').value);
+      const ay = $('ay').value;
 
-let body=$("paymentsBody")
-body.innerHTML=""
+      if(!dueReturn || !fileReturn){ alert('Please enter due date and filing date'); return; }
 
-if(payments.length==0){
+      // Assessed tax = tax payable - TDS - relief
+      let assessedTax = taxPayable - tds - relief; if (assessedTax < 0) assessedTax = 0;
 
-body.innerHTML='<tr><td colspan="3">No payments entered</td></tr>'
-return
-}
+      // Total advance payments irrespective of date
+      const totalAdvance = payments.reduce((s,p)=>s+Number(p.amount),0);
 
-payments.forEach((p,i)=>{
+      // PAYMENTS considered up to filing date
+      const paidUpToFiling = paidTill(fileReturn);
 
-let tr=document.createElement("tr")
+      // 234A: shortfall = assessedTax - (selfTax + paidUpToFiling)
+      let short234A = assessedTax - (selfTax + paidUpToFiling); if (short234A < 0) short234A = 0;
+      // months from day after due date to filing date
+      const dueNext = new Date(dueReturn); dueNext.setDate(dueNext.getDate()+1);
+      const months234A = monthsPart(dueNext.toISOString().slice(0,10), fileReturn);
+      const int234A = short234A * 0.01 * months234A;
 
-tr.innerHTML=
-`<td>${p.date}</td>
-<td>${p.amount}</td>
-<td><button onclick="removePayment(${i})">Remove</button></td>`
+      // 234B: base = round(max(assessedTax - totalAdvance,0), -2)
+      let base234B = Math.max(assessedTax - totalAdvance, 0);
+      const base234B_rounded = roundNearest100(base234B);
+      // months from Apr 1 of AY to filing date
+      let ayStartYear = parseInt(ay.split('-')[0],10);
+      const ayStart = new Date(ayStartYear,3,1); // April 1
+      const months234B = monthsPart(ayStart.toISOString().slice(0,10), fileReturn);
+      const int234B = base234B_rounded * 0.01 * months234B;
 
-body.appendChild(tr)
+      // 234C: instalment required percentages applied on assessedTax
+      const req1 = assessedTax * 0.15;
+      const req2 = assessedTax * 0.45;
+      const req3 = assessedTax * 0.75;
+      const req4 = assessedTax * 1.00;
 
-})
-}
+      // Determine due dates based on AY selected
+      const ayStartYearNum = parseInt(ay.split('-')[0],10);
+      const due1 = ayStartYearNum + '-06-15';
+      const due2 = ayStartYearNum + '-09-15';
+      const due3 = ayStartYearNum + '-12-15';
+      const due4 = (ayStartYearNum + 1) + '-03-15';
 
-function removePayment(i){
-payments.splice(i,1)
-renderPayments()
-}
+      // For each instalment compute cumulative paid till that due date
+      const paid1 = paidTill(due1);
+      const paid2 = paidTill(due2);
+      const paid3 = paidTill(due3);
+      const paid4 = paidTill(due4);
 
-$("addPayment").onclick=()=>{
+      const short1 = Math.max(0, req1 - paid1);
+      const short2 = Math.max(0, req2 - paid2);
+      const short3 = Math.max(0, req3 - paid3);
+      const short4 = Math.max(0, req4 - paid4);
 
-let date=prompt("Payment date YYYY-MM-DD")
-if(!date) return
+      // For each shortfall, find the date when the required cumulative amount was reached (if at all)
+      const payDate1 = short1>0 ? (dateWhenCumulativeAtLeast(req1) || fileReturn) : null;
+      const payDate2 = short2>0 ? (dateWhenCumulativeAtLeast(req2) || fileReturn) : null;
+      const payDate3 = short3>0 ? (dateWhenCumulativeAtLeast(req3) || fileReturn) : null;
+      const payDate4 = short4>0 ? (dateWhenCumulativeAtLeast(req4) || fileReturn) : null;
 
-let amt=Number(prompt("Amount"))
-if(!amt) return
+      // months: from day after due date to date when shortfall was made good (or filing date)
+      const due1Next = new Date(due1); due1Next.setDate(due1Next.getDate()+1);
+      const due2Next = new Date(due2); due2Next.setDate(due2Next.getDate()+1);
+      const due3Next = new Date(due3); due3Next.setDate(due3Next.getDate()+1);
+      const due4Next = new Date(due4); due4Next.setDate(due4Next.getDate()+1);
 
-payments.push({date:date,amount:amt})
+      const months1 = short1>0 ? 3 : 0;
+      const months2 = short2>0 ? 3 : 0;
+      const months3 = short3>0 ? 3 : 0;
+      const months4 = short4>0 ? 1 : 0;
 
-payments.sort((a,b)=>new Date(a.date)-new Date(b.date))
+      const int1 = short1 * 0.01 * months1;
+      const int2 = short2 * 0.01 * months2;
+      const int3 = short3 * 0.01 * months3;
+      const int4 = short4 * 0.01 * months4;
+      const int234C = int1 + int2 + int3 + int4;
 
-renderPayments()
 
-}
 
-$("clearPayments").onclick=()=>{
-payments=[]
-renderPayments()
-}
+     
 
-$("reset").onclick=()=>{
-document.getElementById("frm").reset()
-payments=[]
-renderPayments()
-$("output").innerHTML=""
-}
+      // 234F late fee: if filed after due date
+      let fee234F = 0;
 
-function paidTill(date){
+if (new Date(fileReturn) > new Date(dueReturn)) {
 
-let total=0
-
-payments.forEach(p=>{
-if(new Date(p.date)<=new Date(date))
-total+=Number(p.amount)
-})
-
-return total
-}
-
-$("compute").onclick=()=>{
-
-let tax=num($("taxPayable").value)
-let tds=num($("tds").value)
-let relief=num($("relief").value)
-let selfTax=num($("selfTax").value)
-
-let totalIncome=num($("totalIncome").value)
-
-let due=$("dueReturn").value
-let file=$("fileReturn").value
-
-let ay=$("ay").value
-
-let assessed=tax-tds-relief
-if(assessed<0) assessed=0
-
-let totalAdvance=payments.reduce((a,b)=>a+Number(b.amount),0)
-
-let paidFile=paidTill(file)
-
-let shortA=Math.max(assessed-(selfTax+paidFile),0)
-
-let monthsA=months(due,file)
-
-let intA=shortA*0.01*monthsA
-
-let ayYear=parseInt(ay.split("-")[0])
-
-let ayStart=`${ayYear}-04-01`
-
-let baseB=Math.max(assessed-totalAdvance,0)
-
-let baseBR=round100(baseB)
-
-let monthsB=months(ayStart,file)
-
-let intB=baseBR*0.01*monthsB
-
-let due1=`${ayYear}-06-15`
-let due2=`${ayYear}-09-15`
-let due3=`${ayYear}-12-15`
-let due4=`${ayYear+1}-03-15`
-
-let req1=assessed*0.15
-let req2=assessed*0.45
-let req3=assessed*0.75
-let req4=assessed
-
-let short1=Math.max(req1-paidTill(due1),0)
-let short2=Math.max(req2-paidTill(due2),0)
-let short3=Math.max(req3-paidTill(due3),0)
-let short4=Math.max(req4-paidTill(due4),0)
-
-let int1=short1*0.01*3
-let int2=short2*0.01*3
-let int3=short3*0.01*3
-let int4=short4*0.01*1
-
-let intC=int1+int2+int3+int4
-
-let feeF=0
-
-if(new Date(file)>new Date(due)){
-
-if(totalIncome<=500000) feeF=1000
-else feeF=5000
+  if (totalIncome <= 500000) {
+    fee234F = 1000;
+  } else {
+    fee234F = 5000;
+  }
 
 }
 
-let totalInt=intA+intB+intC
+      const totalInterest = int234A + int234B + int234C;
 
-$("output").innerHTML=`
+      // Build output
+      const out = [];
+      out.push('<h2>Computation Summary</h2>');
+      out.push('<table>');
+      out.push(`<tr><th>Assessed tax (tax - tds - relief)</th><td>${fmt(assessedTax)}</td></tr>`);
+      out.push(`<tr><th>Total payments (all dates)</th><td>${fmt(totalAdvance)}</td></tr>`);
+      out.push(`<tr><th>Payments up to filing date (${fileReturn})</th><td>${fmt(paidUpToFiling)}</td></tr>`);
+      out.push('</table>');
 
-<h3>Summary</h3>
+      out.push('<h3>Section 234A — Delay in filing</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Shortfall for 234A</th><td>${fmt(short234A)}</td></tr>`);
+      out.push(`<tr><th>Months (or part) from day after due date to filing</th><td>${months234A}</td></tr>`);
+      out.push(`<tr><th>Interest @1%/month</th><td>${fmt(int234A)}</td></tr>`);
+      out.push('</table>');
 
-<table>
+      out.push('<h3>Section 234B — Default in payment of advance tax</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Base (assessed tax - total advance)</th><td>${fmt(base234B)}</td></tr>`);
+      out.push(`<tr><th>Base rounded to nearest ₹100</th><td>${fmt(base234B_rounded)}</td></tr>`);
+      out.push(`<tr><th>Months from Apr 1 of AY (${ayStart.toISOString().slice(0,10)}) to filing</th><td>${months234B}</td></tr>`);
+      out.push(`<tr><th>Interest @1%/month</th><td>${fmt(int234B)}</td></tr>`);
+      out.push('</table>');
 
-<tr><th>Assessed Tax</th><td>${fmt(assessed)}</td></tr>
+      out.push('<h3>Section 234C — Deferment of advance tax (quarterly)</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Instalment</th><th>Required</th><th>Paid till due</th><th>Shortfall</th><th>Date shortfall cleared</th><th>Months</th><th>Interest</th></tr>`);
+      out.push(`<tr><td>1 (15 Jun)</td><td>${fmt(req1)}</td><td>${fmt(paid1)}</td><td>${fmt(short1)}</td><td>${payDate1 || 'Not reached'}</td><td>${months1}</td><td>${fmt(int1)}</td></tr>`);
+      out.push(`<tr><td>2 (15 Sep)</td><td>${fmt(req2)}</td><td>${fmt(paid2)}</td><td>${fmt(short2)}</td><td>${payDate2 || 'Not reached'}</td><td>${months2}</td><td>${fmt(int2)}</td></tr>`);
+      out.push(`<tr><td>3 (15 Dec)</td><td>${fmt(req3)}</td><td>${fmt(paid3)}</td><td>${fmt(short3)}</td><td>${payDate3 || 'Not reached'}</td><td>${months3}</td><td>${fmt(int3)}</td></tr>`);
+      out.push(`<tr><td>4 (15 Mar)</td><td>${fmt(req4)}</td><td>${fmt(paid4)}</td><td>${fmt(short4)}</td><td>${payDate4 || 'Not reached'}</td><td>${months4}</td><td>${fmt(int4)}</td></tr>`);
+      out.push(`<tr><th colspan="6">Total 234C interest</th><th>${fmt(int234C)}</th></tr>`);
+      out.push('</table>');
 
-<tr><th>234A Interest</th><td>${fmt(intA)}</td></tr>
+      out.push('<h3>Section 234F — Late filing fee</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Filing after due date?</th><td>${new Date(fileReturn) > new Date(dueReturn) ? 'Yes' : 'No'}</td></tr>`);
+      out.push(`<tr><th>Late fee (234F)</th><td>${fmt(fee234F)}</td></tr>`);
+      out.push('</table>');
 
-<tr><th>234B Interest</th><td>${fmt(intB)}</td></tr>
+      out.push('<h3>Grand totals</h3>');
+      out.push('<table>');
+      out.push(`<tr><th>Total interest (234A + 234B + 234C)</th><td>${fmt(totalInterest)}</td></tr>`);
+      out.push(`<tr><th>Late fee (234F)</th><td>${fmt(fee234F)}</td></tr>`);
+      out.push(`<tr><th>Payable (interest + fee)</th><td>${fmt(totalInterest + fee234F)}</td></tr>`);
+      out.push('</table>');
 
-<tr><th>234C Interest</th><td>${fmt(intC)}</td></tr>
+      $('output').innerHTML = out.join('\n');
+    });
 
-<tr><th>Late Fee 234F</th><td>${fmt(feeF)}</td></tr>
+    // CSV download of payments and summary
+    $('download').addEventListener('click', ()=>{
+      if(payments.length===0){ alert('No payments to download'); return; }
+      let csv = 'date,amount\n'; payments.forEach(p=> csv += `${p.date},${Number(p.amount).toFixed(2)}\n`);
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'payments.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
 
-<tr><th>Total Payable</th><td>${fmt(totalInt+feeF)}</td></tr>
+    // initial render
+    renderPayments();
+  </script>
 
-</table>
+  <script>
+    // --- Example structure for backend call ---
+    function sendReport(type) {
+      fetch('/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: type, data: collectReportData() })
+      })
+      .then(r => r.json())
+      .then(res => alert(res.message));
+    }
 
-`
-
-}
-
-renderPayments()
-
-</script>
-
+    // --- Example harvest function (can be expanded) ---
+    function collectReportData() {
+      return {
+        taxableIncome: document.getElementById('taxableIncome')?.value || '',
+        payments: getPaymentRows?.() || [],
+        results: document.getElementById('resultSection')?.innerText || ''
+      };
+    }
+  </script>
 </body>
 </html>
+
+      
+
