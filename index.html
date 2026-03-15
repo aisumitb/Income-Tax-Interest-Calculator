@@ -165,8 +165,26 @@
     });
 
     // compute cumulative payments up to a date (inclusive)
-    function paidTill(date){ if(!date) return 0; const D=new Date(date); let sum=0; payments.forEach(p=>{ const pd=new Date(p.date); if (!isNaN(pd) && pd.getTime() <= D.getTime()) sum += Number(p.amount); }); return sum; }
+    function paidTill(date){
 
+  if(!date) return 0;
+
+  const dueTime = new Date(date + "T23:59:59").getTime();
+
+  let sum = 0;
+
+  payments.forEach(p => {
+
+    const payTime = new Date(p.date + "T00:00:00").getTime();
+
+    if(payTime <= dueTime){
+      sum += Number(p.amount);
+    }
+
+  });
+
+  return sum;
+}
     // find date when cumulative payments become >= target; returns date string or null
     function dateWhenCumulativeAtLeast(target){ let cum=0; for(const p of payments){ cum += Number(p.amount); if (cum >= target) return p.date; } return null; }
 
