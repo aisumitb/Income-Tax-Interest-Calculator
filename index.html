@@ -257,9 +257,16 @@
 
       // 234F late fee: if filed after due date
       let fee234F = 0;
-      if (new Date(fileReturn) > new Date(dueReturn)){
-        fee234F = totalIncome > 250000 ? 5000 : 1000;
-      }
+
+if (new Date(fileReturn) > new Date(dueReturn)) {
+
+  if (totalIncome <= 500000) {
+    fee234F = 1000;
+  } else {
+    fee234F = 5000;
+  }
+
+}
 
       const totalInterest = int234A + int234B + int234C;
 
