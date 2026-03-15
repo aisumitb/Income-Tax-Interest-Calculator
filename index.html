@@ -208,52 +208,29 @@
       const months234B = monthsPart(ayStart.toISOString().slice(0,10), fileReturn);
       const int234B = base234B_rounded * 0.01 * months234B;
 
-      // 234C: instalment required percentages applied on assessedTax
-      const req1 = assessedTax * 0.15;
-      const req2 = assessedTax * 0.45;
-      const req3 = assessedTax * 0.75;
-      const req4 = assessedTax * 1.00;
+      // 234C calculation
 
-      // Determine due dates based on AY selected
-      const ayStartYearNum = parseInt(ay.split('-')[0],10);
-      const due1 = ayStartYearNum + '-06-15';
-      const due2 = ayStartYearNum + '-09-15';
-      const due3 = ayStartYearNum + '-12-15';
-      const due4 = (ayStartYearNum + 1) + '-03-15';
+const req1 = assessedTax * 0.15;
+const req2 = assessedTax * 0.45;
+const req3 = assessedTax * 0.75;
+const req4 = assessedTax * 1.00;
 
-      // For each instalment compute cumulative paid till that due date
-      const paid1 = paidTill(due1);
-      const paid2 = paidTill(due2);
-      const paid3 = paidTill(due3);
-      const paid4 = paidTill(due4);
+const paid1 = paidTill(due1);
+const paid2 = paidTill(due2);
+const paid3 = paidTill(due3);
+const paid4 = paidTill(due4);
 
-      const short1 = Math.max(0, req1 - paid1);
-      const short2 = Math.max(0, req2 - paid2);
-      const short3 = Math.max(0, req3 - paid3);
-      const short4 = Math.max(0, req4 - paid4);
+const short1 = Math.max(req1 - paid1, 0);
+const short2 = Math.max(req2 - paid2, 0);
+const short3 = Math.max(req3 - paid3, 0);
+const short4 = Math.max(req4 - paid4, 0);
 
-      // For each shortfall, find the date when the required cumulative amount was reached (if at all)
-      const payDate1 = short1>0 ? (dateWhenCumulativeAtLeast(req1) || fileReturn) : null;
-      const payDate2 = short2>0 ? (dateWhenCumulativeAtLeast(req2) || fileReturn) : null;
-      const payDate3 = short3>0 ? (dateWhenCumulativeAtLeast(req3) || fileReturn) : null;
-      const payDate4 = short4>0 ? (dateWhenCumulativeAtLeast(req4) || fileReturn) : null;
+const int1 = short1 * 0.01 * 3;
+const int2 = short2 * 0.01 * 3;
+const int3 = short3 * 0.01 * 3;
+const int4 = short4 * 0.01 * 1;
 
-      // months: from day after due date to date when shortfall was made good (or filing date)
-      const due1Next = new Date(due1); due1Next.setDate(due1Next.getDate()+1);
-      const due2Next = new Date(due2); due2Next.setDate(due2Next.getDate()+1);
-      const due3Next = new Date(due3); due3Next.setDate(due3Next.getDate()+1);
-      const due4Next = new Date(due4); due4Next.setDate(due4Next.getDate()+1);
-
-      const months1 = short1>0 ? 3 : 0;
-      const months2 = short2>0 ? 3 : 0;
-      const months3 = short3>0 ? 3 : 0;
-      const months4 = short4>0 ? 1 : 0;
-
-      const int1 = short1 * 0.01 * months1;
-      const int2 = short2 * 0.01 * months2;
-      const int3 = short3 * 0.01 * months3;
-      const int4 = short4 * 0.01 * months4;
-      const int234C = int1 + int2 + int3 + int4;
+const int234C = int1 + int2 + int3 + int4;
 
       // 234F late fee: if filed after due date
       let fee234F = 0;
