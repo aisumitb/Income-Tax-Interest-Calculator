@@ -144,18 +144,40 @@
     }); if(payments.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=3; td.className='muted'; td.textContent='No payments entered'; tr.appendChild(td); paymentsBody.appendChild(tr);} }
 
     $('addPayment').onclick = () => {
-      const date = prompt('Payment date (YYYY-MM-DD)');
-      if (!date) return;
-      const iso = dateISO(date);
-      if (!iso) { alert('Invalid date'); return; }
-      const amtStr = prompt('Amount (₹)');
-      if (!amtStr) return;
-      const amt = toNum(amtStr);
-      if (amt <= 0) { alert('Enter positive amount'); return; }
-      payments.push({date: iso, amount: amt});
-      payments.sort((a,b)=> new Date(a.date)-new Date(b.date));
-      renderPayments();
-    };
+
+  const dateStr = prompt('Enter payment date (DD-MM-YYYY)');
+
+  if(!dateStr) return;
+
+  const parts = dateStr.split('-');
+
+  if(parts.length !== 3){
+    alert('Enter date in DD-MM-YYYY format');
+    return;
+  }
+
+  const day = parts[0];
+  const month = parts[1];
+  const year = parts[2];
+
+  const isoDate = `${year}-${month}-${day}`;
+
+  const amtStr = prompt('Amount (₹)');
+  if(!amtStr) return;
+
+  const amt = toNum(amtStr);
+
+  if(amt <= 0){
+    alert('Enter valid amount');
+    return;
+  }
+
+  payments.push({date: isoDate, amount: amt});
+
+  payments.sort((a,b)=> new Date(a.date) - new Date(b.date));
+
+  renderPayments();
+};
 
     $('clearPayments').addEventListener('click', ()=>{ if(confirm('Clear all payments?')){ payments.length=0; renderPayments(); } });
 
@@ -185,6 +207,7 @@
 
   return sum;
 }
+ 
     // find date when cumulative payments become >= target; returns date string or null
     function dateWhenCumulativeAtLeast(target){ let cum=0; for(const p of payments){ cum += Number(p.amount); if (cum >= target) return p.date; } return null; }
 
@@ -233,12 +256,15 @@
       const req4 = assessedTax * 1.00;
 
       // Determine due dates based on AY selected
-      const ayStartYearNum = parseInt(ay.split('-')[0],10);
-      const due1 = ayStartYearNum + '-06-15';
-      const due2 = ayStartYearNum + '-09-15';
-      const due3 = ayStartYearNum + '-12-15';
-      const due4 = (ayStartYearNum + 1) + '-03-15';
+     const ayStartYearNum = parseInt(ay.split('-')[0],10);
 
+// advance tax belongs to previous financial year
+const fyYear = ayStartYearNum - 1;
+
+const due1 = fyYear + '-06-15';
+const due2 = fyYear + '-09-15';
+const due3 = fyYear + '-12-15';
+const due4 = ayStartYearNum + '-03-15';
       // For each instalment compute cumulative paid till that due date
       const paid1 = paidTill(due1);
       const paid2 = paidTill(due2);
@@ -380,4 +406,3 @@ if (new Date(fileReturn) > new Date(dueReturn)) {
 </html>
 
       
-
