@@ -22,6 +22,20 @@
     .actions{display:flex;gap:8px;flex-wrap:wrap}
     .danger{background:#ef4444}
     .secondary{background:#64748b}
+
+    .site-footer {
+  margin-top: auto;
+  text-align: center;
+  padding: 12px;
+  font-size: 14px;
+  background-color: #f5f5f5;
+  .visitor-counter{
+    text-align:right;
+    font-size:12px;
+    color:#777;
+    margin-top:4px;   /* small gap from footer */
+    margin-right:20px;
+}
   </style>
 </head>
 <body>
@@ -402,6 +416,21 @@ if (new Date(fileReturn) > new Date(dueReturn)) {
       };
     }
   </script>
+   <footer class="site-footer">
+    All content and outputs on this platform are indicative in nature. Before taking any final decision or action, users must consult with us. We disclaim any liability for actions taken without such consultation.
+    <br>
+    © CA Sumit Kr Bagra
+  </footer>
+  <div class="visitor-counter">
+        👁 Visitors: <span id="counter">00000</span>
+    </div>
+    <script>
+fetch("https://script.google.com/macros/s/AKfycbxyVUzOwyd2biyCushl6oRfwcFHoz1i8wD8p-aSBlBTHMRehGubs0_zvy1CGKxiwK2QOA/exec?type=hit&page=IT-interest-calculator")
+.then(res=>res.json())
+.then(data=>{
+document.getElementById("counter").innerText=data.visitors
+})
+</script>
 </body>
 </html>
 
